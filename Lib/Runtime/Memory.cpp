@@ -57,7 +57,8 @@ static Memory* createMemoryImpl(Compartment* compartment,
 
 	{
 #ifdef WAVM_HAS_TRACY
-		ZoneNamedN(_zone_avp, "allocateVirtualPages", true);
+		ZoneScopedN("allocateVirtualPages", true);
+		ZoneValue(memoryMaxPages + numGuardPages);
 #endif
 		memory->baseAddress = Platform::allocateVirtualPages(memoryMaxPages + numGuardPages);
 	}
@@ -143,7 +144,7 @@ Memory* Runtime::cloneMemory(Memory* memory, Compartment* newCompartment, bool c
 	if(copyContents)
 	{
 #ifdef WAVM_HAS_TRACY
-		ZoneNamedN(_zone_mcpy, "memcpy memory content", true);
+		ZoneScopedN("memcpy memory content", true);
 		ZoneValue(numPages * IR::numBytesPerPage);
 #endif
 		memcpy(newMemory->baseAddress, memory->baseAddress, numPages * IR::numBytesPerPage);
