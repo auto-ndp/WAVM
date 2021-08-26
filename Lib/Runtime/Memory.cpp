@@ -14,6 +14,9 @@
 #include "WAVM/Platform/RWMutex.h"
 #include "WAVM/Runtime/Runtime.h"
 #include "WAVM/RuntimeABI/RuntimeABI.h"
+#ifdef WAVM_HAS_TRACY
+#include <Tracy.hpp>
+#endif
 
 using namespace WAVM;
 using namespace WAVM::Runtime;
@@ -40,6 +43,9 @@ static Memory* createMemoryImpl(Compartment* compartment,
 								std::string&& debugName,
 								ResourceQuotaRefParam resourceQuota)
 {
+#ifdef WAVM_HAS_TRACY
+	ZoneNamedNS(_zone_root, "Memory::createMemoryImpl", 6, true);
+#endif
 	Memory* memory = new Memory(compartment, type, std::move(debugName), resourceQuota);
 
 	// On a 64-bit runtime, allocate 8GB of address space for the memory.
@@ -49,7 +55,12 @@ static Memory* createMemoryImpl(Compartment* compartment,
 	const Uptr memoryMaxBytes = Uptr(8ull * 1024 * 1024 * 1024);
 	const Uptr memoryMaxPages = memoryMaxBytes >> pageBytesLog2;
 
-	memory->baseAddress = Platform::allocateVirtualPages(memoryMaxPages + numGuardPages);
+	{
+#ifdef WAVM_HAS_TRACY
+		ZoneNamedN(_zone_avp, "allocateVirtualPages", true);
+#endif
+		memory->baseAddress = Platform::allocateVirtualPages(memoryMaxPages + numGuardPages);
+	}
 	memory->numReservedBytes = memoryMaxBytes;
 	if(!memory->baseAddress)
 	{
@@ -57,19 +68,28 @@ static Memory* createMemoryImpl(Compartment* compartment,
 		return nullptr;
 	}
 
-	// Grow the memory to the type's minimum size.
-	if(growMemory(memory, numPages) != GrowResult::success)
 	{
-		delete memory;
-		return nullptr;
+#ifdef WAVM_HAS_TRACY
+		ZoneNamedN(_zone_gw, "growMemory", true);
+#endif
+		// Grow the memory to the type's minimum size.
+		if(growMemory(memory, numPages) != GrowResult::success)
+		{
+			delete memory;
+			return nullptr;
+		}
 	}
 
 	// Add the memory to the global array.
 	{
-		Platform::RWMutex::ExclusiveLock memoriesLock(memoriesMutex);
-		memories.push_back(memory);
+#ifdef WAVM_HAS_TRACY
+		ZoneNamedN(_zone_ata, "addToArray", true);
+#endif
+		{
+			Platform::RWMutex::ExclusiveLock memoriesLock(memoriesMutex);
+			memories.push_back(memory);
+		}
 	}
-
 	return memory;
 }
 
@@ -78,6 +98,9 @@ Memory* Runtime::createMemory(Compartment* compartment,
 							  std::string&& debugName,
 							  ResourceQuotaRefParam resourceQuota)
 {
+#ifdef WAVM_HAS_TRACY
+	ZoneNamedNS(_zone_root, "Runtime::createMemory", 6, true);
+#endif
 	WAVM_ASSERT(type.size.min <= UINTPTR_MAX);
 	Memory* memory = createMemoryImpl(
 		compartment, type, Uptr(type.size.min), std::move(debugName), resourceQuota);
@@ -87,6 +110,9 @@ Memory* Runtime::createMemory(Compartment* compartment,
 	{
 		Platform::RWMutex::ExclusiveLock compartmentLock(compartment->mutex);
 
+#ifdef WAVM_HAS_TRACY
+		ZoneNamedN(_zone_aim, "add to IndexMap", true);
+#endif
 		memory->id = compartment->memories.add(UINTPTR_MAX, memory);
 		if(memory->id == UINTPTR_MAX)
 		{
@@ -101,7 +127,11 @@ Memory* Runtime::createMemory(Compartment* compartment,
 	return memory;
 }
 
-Memory* Runtime::cloneMemory(Memory* memory, Compartment* newCompartment, bool copyContents) {
+Memory* Runtime::cloneMemory(Memory* memory, Compartment* newCompartment, bool copyContents)
+{
+#ifdef WAVM_HAS_TRACY
+	ZoneNamedNS(_zone_root, "Runtime::cloneMemory", 6, true);
+#endif
 	Platform::RWMutex::ExclusiveLock resizingLock(memory->resizingMutex);
 	const Uptr numPages = memory->numPages.load(std::memory_order_acquire);
 	std::string debugName = memory->debugName;
@@ -110,8 +140,13 @@ Memory* Runtime::cloneMemory(Memory* memory, Compartment* newCompartment, bool c
 	if(!newMemory) { return nullptr; }
 
 	// Copy the memory contents to the new memory.
-	if(copyContents) {
-	    memcpy(newMemory->baseAddress, memory->baseAddress, numPages * IR::numBytesPerPage);
+	if(copyContents)
+	{
+#ifdef WAVM_HAS_TRACY
+		ZoneNamedN(_zone_mcpy, "memcpy memory content", true);
+		ZoneValue(numPages * IR::numBytesPerPage);
+#endif
+		memcpy(newMemory->baseAddress, memory->baseAddress, numPages * IR::numBytesPerPage);
 	}
 
 	resizingLock.unlock();
@@ -119,6 +154,9 @@ Memory* Runtime::cloneMemory(Memory* memory, Compartment* newCompartment, bool c
 	// Insert the memory in the new compartment's memories array with the same index as it had in
 	// the original compartment's memories IndexMap.
 	{
+#ifdef WAVM_HAS_TRACY
+		ZoneNamedN(_zone_iic, "insert into compartment", true);
+#endif
 		Platform::RWMutex::ExclusiveLock compartmentLock(newCompartment->mutex);
 
 		newMemory->id = memory->id;
@@ -205,7 +243,9 @@ GrowResult Runtime::growMemory(Memory* memory, Uptr numPagesToGrow, Uptr* outOld
 	{
 		// Check the memory page quota.
 		if(memory->resourceQuota && !memory->resourceQuota->memoryPages.allocate(numPagesToGrow))
-		{ return GrowResult::outOfQuota; }
+		{
+			return GrowResult::outOfQuota;
+		}
 
 		Platform::RWMutex::ExclusiveLock resizingLock(memory->resizingMutex);
 		oldNumPages = memory->numPages.load(std::memory_order_acquire);
@@ -390,7 +430,9 @@ WAVM_DEFINE_INTRINSIC_FUNCTION(wavmIntrinsicsMemory,
 	Platform::RWMutex::ExclusiveLock dataSegmentsLock(instance->dataSegmentsMutex);
 
 	if(instance->dataSegments[dataSegmentIndex])
-	{ instance->dataSegments[dataSegmentIndex].reset(); }
+	{
+		instance->dataSegments[dataSegmentIndex].reset();
+	}
 }
 
 WAVM_DEFINE_INTRINSIC_FUNCTION(wavmIntrinsics,
