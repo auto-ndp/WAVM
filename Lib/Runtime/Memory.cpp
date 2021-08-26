@@ -18,6 +18,8 @@
 #include <Tracy.hpp>
 #endif
 
+#include <sys/mman.h>
+
 using namespace WAVM;
 using namespace WAVM::Runtime;
 
@@ -147,7 +149,11 @@ Memory* Runtime::cloneMemory(Memory* memory, Compartment* newCompartment, bool c
 		ZoneScopedN("memcpy memory content");
 		ZoneValue(numPages * IR::numBytesPerPage);
 #endif
-		memcpy(newMemory->baseAddress, memory->baseAddress, numPages * IR::numBytesPerPage);
+		auto numBytes = numPages * IR::numBytesPerPage;
+		madvise(newMemory->baseAddress, numBytes, MADV_SEQUENTIAL);
+		madvise(memory->baseAddress, numBytes, MADV_SEQUENTIAL);
+		memcpy(newMemory->baseAddress, memory->baseAddress, numBytes);
+		madvise(newMemory->baseAddress, numBytes, MADV_NORMAL);
 	}
 
 	resizingLock.unlock();
