@@ -11,6 +11,10 @@
 #include "WAVM/Runtime/Runtime.h"
 #include "WAVM/RuntimeABI/RuntimeABI.h"
 
+#ifdef WAVM_HAS_TRACY
+#include <Tracy.hpp>
+#endif
+
 using namespace WAVM;
 using namespace WAVM::Runtime;
 
@@ -65,16 +69,33 @@ Compartment* Runtime::createCompartment(std::string&& debugName)
 	return new Compartment(std::move(debugName));
 }
 
-Compartment* Runtime::cloneCompartment(const Compartment* compartment, std::string&& debugName, bool copyMemoryContents)
+Compartment* Runtime::cloneCompartment(const Compartment* compartment,
+									   std::string&& debugName,
+									   bool copyMemoryContents)
 {
+#ifdef WAVM_HAS_TRACY
+	ZoneNamedNS(_zone_root, "Runtime::cloneCompartment", 6, true);
+#endif
 	Timing::Timer timer;
 
-	Compartment* newCompartment = new Compartment(std::move(debugName));
+	Compartment* newCompartment;
+	{
+#ifdef WAVM_HAS_TRACY
+		ZoneNamedN(_zone_nc, "new Compartment", true);
+#endif
+		newCompartment = new Compartment(std::move(debugName));
+	}
 	Platform::RWMutex::ShareableLock compartmentLock(compartment->mutex);
+#ifdef WAVM_HAS_TRACY
+	TracyMessageL("Compartment lock acquired");
+#endif
 
 	// Clone tables.
 	for(Table* table : compartment->tables)
 	{
+#ifdef WAVM_HAS_TRACY
+		ZoneNamedN(_zone_ct, "clone Table", true);
+#endif
 		Table* newTable = cloneTable(table, newCompartment);
 		WAVM_ASSERT(newTable->id == table->id);
 	}
@@ -82,17 +103,28 @@ Compartment* Runtime::cloneCompartment(const Compartment* compartment, std::stri
 	// Clone memories.
 	for(Memory* memory : compartment->memories)
 	{
+#ifdef WAVM_HAS_TRACY
+		ZoneNamedN(_zone_cm, "clone Memory", true);
+#endif
 		Memory* newMemory = cloneMemory(memory, newCompartment, copyMemoryContents);
 		WAVM_ASSERT(newMemory->id == memory->id);
 	}
 
 	// Clone globals.
-	newCompartment->globalDataAllocationMask = compartment->globalDataAllocationMask;
-	memcpy(newCompartment->initialContextMutableGlobals,
-		   compartment->initialContextMutableGlobals,
-		   sizeof(newCompartment->initialContextMutableGlobals));
+	{
+#ifdef WAVM_HAS_TRACY
+		ZoneNamedN(_zone_mcg, "memcpy Globals", true);
+#endif
+		newCompartment->globalDataAllocationMask = compartment->globalDataAllocationMask;
+		memcpy(newCompartment->initialContextMutableGlobals,
+			   compartment->initialContextMutableGlobals,
+			   sizeof(newCompartment->initialContextMutableGlobals));
+	}
 	for(Global* global : compartment->globals)
 	{
+#ifdef WAVM_HAS_TRACY
+		ZoneNamedN(_zone_cg, "clone Global", true);
+#endif
 		Global* newGlobal = cloneGlobal(global, newCompartment);
 		WAVM_ASSERT(newGlobal->id == global->id);
 		WAVM_ASSERT(newGlobal->mutableGlobalIndex == global->mutableGlobalIndex);
@@ -101,6 +133,9 @@ Compartment* Runtime::cloneCompartment(const Compartment* compartment, std::stri
 	// Clone exception types.
 	for(ExceptionType* exceptionType : compartment->exceptionTypes)
 	{
+#ifdef WAVM_HAS_TRACY
+		ZoneNamedN(_zone_cet, "clone ExceptionType", true);
+#endif
 		ExceptionType* newExceptionType = cloneExceptionType(exceptionType, newCompartment);
 		WAVM_ASSERT(newExceptionType->id == exceptionType->id);
 	}
@@ -108,6 +143,9 @@ Compartment* Runtime::cloneCompartment(const Compartment* compartment, std::stri
 	// Clone instances.
 	for(Instance* instance : compartment->instances)
 	{
+#ifdef WAVM_HAS_TRACY
+		ZoneNamedN(_zone_ci, "clone Instance", true);
+#endif
 		Instance* newInstance = cloneInstance(instance, newCompartment);
 		WAVM_ASSERT(newInstance->id == instance->id);
 	}
