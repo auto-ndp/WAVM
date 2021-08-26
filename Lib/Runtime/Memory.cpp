@@ -1,6 +1,7 @@
 #include "WAVM/Platform/Memory.h"
 #include <stdint.h>
 #include <string.h>
+#include <algorithm>
 #include <atomic>
 #include <memory>
 #include <vector>
@@ -147,7 +148,10 @@ Memory* Runtime::cloneMemory(Memory* memory, Compartment* newCompartment, bool c
 		ZoneScopedN("memcpy memory content");
 		ZoneValue(numPages * IR::numBytesPerPage);
 #endif
-		memcpy(newMemory->baseAddress, memory->baseAddress, numPages * IR::numBytesPerPage);
+		std::copy(
+			static_cast<const uint64_t*>(memory->baseAddress),
+			static_cast<const uint64_t*>(memory->baseAddress + numPages * IR::numBytesPerPage),
+			static_cast<uint64_t*>(newMemory->baseAddress));
 	}
 
 	resizingLock.unlock();
