@@ -149,9 +149,9 @@ Memory* Runtime::cloneMemory(Memory* memory, Compartment* newCompartment, bool c
 		ZoneValue(numPages * IR::numBytesPerPage);
 #endif
 		std::copy(
-			static_cast<const uint64_t*>(memory->baseAddress),
-			static_cast<const uint64_t*>(memory->baseAddress + numPages * IR::numBytesPerPage),
-			static_cast<uint64_t*>(newMemory->baseAddress));
+			reinterpret_cast<const uint64_t*>(memory->baseAddress),
+			reinterpret_cast<const uint64_t*>(memory->baseAddress + numPages * IR::numBytesPerPage),
+			reinterpret_cast<uint64_t*>(newMemory->baseAddress));
 	}
 
 	resizingLock.unlock();
