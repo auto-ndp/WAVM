@@ -679,7 +679,7 @@ WAVM_SET_TARGET_COMPILE_OPTIONS(libWAVM)
 WAVM_INSTALL_TARGET(libWAVM)
 if(TARGET Tracy::TracyClient)
     message(STATUS "Tracy found!")
-    target_link_libraries(libWAVM PUBLIC Tracy::TracyClient)
+    target_link_libraries(libWAVM PRIVATE Tracy::TracyClient)
     target_compile_definitions(libWAVM PUBLIC WAVM_HAS_TRACY=1)
 endif()
 set_target_properties(libWAVM PROPERTIES
