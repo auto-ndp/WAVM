@@ -64,6 +64,7 @@ U8* Platform::allocateVirtualPages(Uptr numPages)
 		dumpErrorCallStack(0);
 		return nullptr;
 	}
+	madvise(result, numBytes, MADV_HUGEPAGE);
 	return (U8*)result;
 }
 
