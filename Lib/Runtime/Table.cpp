@@ -202,7 +202,7 @@ Table* Runtime::createTable(Compartment* compartment,
 
 Table* Runtime::cloneTable(Table* table, Compartment* newCompartment)
 {
-	Platform::RWMutex::ExclusiveLock resizingLock(table->resizingMutex);
+	Platform::RWMutex::ShareableLock resizingLock(table->resizingMutex);
 
 	// Create the new table.
 	const Uptr numElements = table->numElements.load(std::memory_order_acquire);

@@ -495,13 +495,13 @@ Instance* Runtime::cloneInstance(Instance* instance, Compartment* newCompartment
 
 	DataSegmentVector newDataSegments;
 	{
-		Platform::RWMutex::ExclusiveLock passiveDataSegmentsLock(instance->dataSegmentsMutex);
+		Platform::RWMutex::ShareableLock passiveDataSegmentsLock(instance->dataSegmentsMutex);
 		newDataSegments = instance->dataSegments;
 	}
 
 	ElemSegmentVector newElemSegments;
 	{
-		Platform::RWMutex::ExclusiveLock passiveElemSegmentsLock(instance->elemSegmentsMutex);
+		Platform::RWMutex::ShareableLock passiveElemSegmentsLock(instance->elemSegmentsMutex);
 		newElemSegments = instance->elemSegments;
 	}
 

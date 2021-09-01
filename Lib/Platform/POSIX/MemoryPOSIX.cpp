@@ -98,6 +98,7 @@ U8* Platform::allocateAlignedVirtualPages(Uptr numPages,
 		{ WAVM_ERROR_UNLESS(!munmap(result + (numPages << pageSizeLog2), numTailPaddingBytes)); }
 
 		outUnalignedBaseAddress = result;
+		madvise(result, numBytes, MADV_HUGEPAGE);
 		return result;
 	}
 	else
