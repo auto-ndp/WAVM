@@ -134,7 +134,7 @@ Memory* Runtime::cloneMemory(Memory* memory, Compartment* newCompartment, bool c
 #ifdef WAVM_HAS_TRACY
 	ZoneNamedNS(_zone_root, "Runtime::cloneMemory", 6, true);
 #endif
-	Platform::RWMutex::ExclusiveLock resizingLock(memory->resizingMutex);
+	Platform::RWMutex::ShareableLock resizingLock(memory->resizingMutex);
 	const Uptr numPages = memory->numPages.load(std::memory_order_acquire);
 	std::string debugName = memory->debugName;
 	Memory* newMemory = createMemoryImpl(
