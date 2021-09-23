@@ -200,6 +200,12 @@ void Runtime::cloneMemoryInto(Memory* targetMemory,
 	{
 		const auto unmapPageCount = targetOriginalPageCount - sourcePageCount;
 		unmapMemoryPages(targetMemory, sourcePageCount, unmapPageCount);
+		targetMemory->numPages.store(sourcePageCount, std::memory_order_release);
+		if(targetMemory->id != UINTPTR_MAX)
+		{
+			newCompartment->runtimeData->memories[targetMemory->id].numPages.store(
+				sourcePageCount, std::memory_order_release);
+		}
 	}
 	if(copyContents)
 	{
@@ -220,7 +226,7 @@ void Runtime::cloneMemoryInto(Memory* targetMemory,
 #endif
 		std::fill(reinterpret_cast<uint64_t*>(targetMemory->baseAddress),
 				  reinterpret_cast<uint64_t*>(targetMemory->baseAddress
-													+ sourcePageCount * IR::numBytesPerPage),
+											  + sourcePageCount * IR::numBytesPerPage),
 				  uint64_t(0));
 	}
 	// compartment should already be up to date
