@@ -466,28 +466,33 @@ Instance* Runtime::instantiateModuleInternal(Compartment* compartment,
 Instance* Runtime::cloneInstance(Instance* instance, Compartment* newCompartment)
 {
 	// Remap the module's references to the cloned compartment.
-	HashMap<std::string, Object*> newExportMap;
+	HashMap<std::string, Object*> newExportMap(instance->exportMap.size());
 	for(const auto& pair : instance->exportMap)
 	{ newExportMap.add(pair.key, remapToClonedCompartment(pair.value, newCompartment)); }
 	std::vector<Object*> newExports;
+	newExports.reserve(instance->exports.size());
 	for(Object* exportObject : instance->exports)
 	{ newExports.push_back(remapToClonedCompartment(exportObject, newCompartment)); }
 
 	std::vector<Function*> newFunctions = instance->functions;
 
 	std::vector<Table*> newTables;
+	newTables.reserve(instance->tables.size());
 	for(Table* table : instance->tables)
 	{ newTables.push_back(remapToClonedCompartment(table, newCompartment)); }
 
 	std::vector<Memory*> newMemories;
+	newMemories.reserve(instance->memories.size());
 	for(Memory* memory : instance->memories)
 	{ newMemories.push_back(remapToClonedCompartment(memory, newCompartment)); }
 
 	std::vector<Global*> newGlobals;
+	newGlobals.reserve(instance->globals.size());
 	for(Global* global : instance->globals)
 	{ newGlobals.push_back(remapToClonedCompartment(global, newCompartment)); }
 
 	std::vector<ExceptionType*> newExceptionTypes;
+	newExceptionTypes.reserve(instance->exceptionTypes.size());
 	for(ExceptionType* exceptionType : instance->exceptionTypes)
 	{ newExceptionTypes.push_back(remapToClonedCompartment(exceptionType, newCompartment)); }
 
