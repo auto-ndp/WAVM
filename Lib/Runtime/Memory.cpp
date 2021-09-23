@@ -200,6 +200,10 @@ void Runtime::cloneMemoryInto(Memory* targetMemory,
 	{
 		const auto unmapPageCount = targetOriginalPageCount - sourcePageCount;
 		unmapMemoryPages(targetMemory, sourcePageCount, unmapPageCount);
+		if(targetMemory->resourceQuota)
+		{
+			targetMemory->resourceQuota->memoryPages.free(unmapPageCount);
+		}
 		targetMemory->numPages.store(sourcePageCount, std::memory_order_release);
 		if(targetMemory->id != UINTPTR_MAX)
 		{

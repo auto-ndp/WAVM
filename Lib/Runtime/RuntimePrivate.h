@@ -327,6 +327,7 @@ namespace WAVM { namespace Runtime {
 						 const Memory* sourceMemory,
 						 Compartment* newCompartment,
 						 bool copyContents = true);
+	void cloneTableInto(Table* targetTable, const Table* sourceTable, Compartment* newCompartment);
 
 	// Clones objects into a new compartment with the same ID.
 	Table* cloneTable(Table* memory, Compartment* newCompartment);

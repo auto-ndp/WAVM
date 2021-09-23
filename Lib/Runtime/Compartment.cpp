@@ -153,16 +153,25 @@ WAVM_API void Runtime::cloneCompartmentInto(Compartment& targetCompartment,
 	clearIndexMap(&targetCompartment, targetCompartment.foreigns);
 
 	// Clone tables.
-	// TODO: Reuse tables
-	clearIndexMap(&targetCompartment, targetCompartment.tables);
-	for(Table* table : oldCompartment->tables)
+	ignoreIndexList.clear();
+	for(auto it = oldCompartment->tables.begin(); it != oldCompartment->tables.end(); ++it)
 	{
-#ifdef WAVM_HAS_TRACY
-		ZoneNamedN(_zone_ct, "clone Table", true);
-#endif
-		Table* newTable = cloneTable(table, &targetCompartment);
-		WAVM_ASSERT(newTable->id == table->id);
+		const WAVM::Uptr idx = it.getIndex();
+		ignoreIndexList.addOrFail(idx);
+		if(targetCompartment.tables.contains(idx))
+		{
+			const Table* oldTable = *it;
+			Table* newTable = *targetCompartment.tables.get(idx);
+			cloneTableInto(newTable, oldTable, &targetCompartment);
+		}
+		else
+		{
+			Table* newTable = cloneTable(*it, &targetCompartment);
+			WAVM_ASSERT(newTable->id == (*it)->id);
+		}
 	}
+	clearRemainingIndexMap(
+		&targetCompartment, targetCompartment.memories, ignoreIndexList, removeList);
 
 	// Clone memories.
 	// for(Memory* memory : oldCompartment->memories)
@@ -173,7 +182,7 @@ WAVM_API void Runtime::cloneCompartmentInto(Compartment& targetCompartment,
 		ignoreIndexList.addOrFail(idx);
 		if(targetCompartment.memories.contains(idx))
 		{
-			Memory* oldMemory = *it;
+			const Memory* oldMemory = *it;
 			Memory* newMemory = *targetCompartment.memories.get(idx);
 			cloneMemoryInto(newMemory, oldMemory, &targetCompartment, copyMemoryContents);
 		}
