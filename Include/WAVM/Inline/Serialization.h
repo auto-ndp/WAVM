@@ -225,6 +225,20 @@ namespace WAVM { namespace Serialization {
 		}
 	}
 
+	template<typename Stream> void serialize(Stream& stream, const std::string& string)
+	{
+		Uptr size = string.size();
+		serializeVarUInt32(stream, size);
+		if(Stream::isInput)
+		{
+			throw std::invalid_argument("Input stream with const string");
+		}
+		else
+		{
+			serializeBytes(stream, (U8*)string.c_str(), size);
+		}
+	}
+
 	template<typename Stream, typename Element, typename Allocator, typename SerializeElement>
 	void serializeArray(Stream& stream,
 						std::vector<Element, Allocator>& vector,
