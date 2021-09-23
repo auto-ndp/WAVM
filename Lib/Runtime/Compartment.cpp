@@ -73,11 +73,6 @@ Compartment* Runtime::cloneCompartment(const Compartment* compartment,
 									   std::string&& debugName,
 									   bool copyMemoryContents)
 {
-#ifdef WAVM_HAS_TRACY
-	ZoneNamedNS(_zone_root, "Runtime::cloneCompartment", 6, true);
-#endif
-	Timing::Timer timer;
-
 	Compartment* newCompartment;
 	{
 #ifdef WAVM_HAS_TRACY
@@ -85,73 +80,156 @@ Compartment* Runtime::cloneCompartment(const Compartment* compartment,
 #endif
 		newCompartment = new Compartment(std::move(debugName));
 	}
-	Platform::RWMutex::ShareableLock compartmentLock(compartment->mutex);
+	Runtime::cloneCompartmentInto(
+		*newCompartment, compartment, std::move(debugName), copyMemoryContents);
+	return newCompartment;
+}
+
+namespace {
+	template<class T = Runtime::GCObject*>
+	void clearIndexMap(Runtime::Compartment* ownerCompartment,
+					   WAVM::IndexMap<WAVM::Uptr, T>& indexMap)
+	{
+		for(T p : indexMap)
+		{
+			Runtime::GCObject* gp = p;
+			if(gp->compartment == ownerCompartment)
+			{
+				if(gp->numRootReferences.load() != 0)
+				{
+					throw std::runtime_error("Removed GCObject still has root references alive");
+				}
+				delete p;
+			}
+		}
+		indexMap = WAVM::IndexMap<WAVM::Uptr, T>(indexMap.getMinIndex(), indexMap.getMaxIndex());
+	}
+
+	template<class T = Runtime::GCObject*>
+	void clearRemainingIndexMap(Runtime::Compartment* ownerCompartment,
+								WAVM::IndexMap<WAVM::Uptr, T>& indexMap,
+								const WAVM::HashSet<WAVM::Uptr>& ignoreList,
+								std::vector<WAVM::Uptr>& removeList)
+	{
+		removeList.clear();
+		for(auto it = indexMap.begin(); it != indexMap.end(); ++it)
+		{
+			const WAVM::Uptr idx = it.getIndex();
+			if(!ignoreList.contains(idx)) { removeList.push_back(idx); }
+		}
+		for(WAVM::Uptr idx : removeList)
+		{
+			T p = indexMap.get(idx);
+			Runtime::GCObject* gp = p;
+			if(gp->compartment == ownerCompartment)
+			{
+				if(gp->numRootReferences.load() != 0)
+				{
+					throw std::runtime_error("Removed GCObject still has root references alive");
+				}
+				delete p;
+			}
+			indexMap.removeOrFail(idx);
+		}
+	}
+}
+
+WAVM_API void Runtime::cloneCompartmentInto(Compartment& targetCompartment,
+											const Compartment* oldCompartment,
+											std::string&& debugName = "",
+											bool copyMemoryContents = true)
+{
 #ifdef WAVM_HAS_TRACY
-	TracyMessageL("Compartment lock acquired");
+	ZoneNamedNS(_zone_root, "Runtime::cloneCompartmentInto", 6, true);
 #endif
+	Platform::RWMutex::ShareableLock compartmentLock(oldCompartment->mutex);
+	Timing::Timer timer;
+	WAVM::HashSet<WAVM::Uptr> ignoreIndexList(32);
+	std::vector<WAVM::Uptr> removeList;
+	removeList.reserve(32);
+
+	// Reset structures
+	clearIndexMap(&targetCompartment, targetCompartment.contexts);
+	clearIndexMap(&targetCompartment, targetCompartment.foreigns);
 
 	// Clone tables.
-	for(Table* table : compartment->tables)
+	// TODO: Reuse tables
+	clearIndexMap(&targetCompartment, targetCompartment.tables);
+	for(Table* table : oldCompartment->tables)
 	{
 #ifdef WAVM_HAS_TRACY
 		ZoneNamedN(_zone_ct, "clone Table", true);
 #endif
-		Table* newTable = cloneTable(table, newCompartment);
+		Table* newTable = cloneTable(table, &targetCompartment);
 		WAVM_ASSERT(newTable->id == table->id);
 	}
 
 	// Clone memories.
-	for(Memory* memory : compartment->memories)
+	// for(Memory* memory : oldCompartment->memories)
+	ignoreIndexList.clear();
+	for(auto it = oldCompartment->memories.begin(); it != oldCompartment->memories.end(); ++it)
 	{
-#ifdef WAVM_HAS_TRACY
-		ZoneNamedN(_zone_cm, "clone Memory", true);
-#endif
-		Memory* newMemory = cloneMemory(memory, newCompartment, copyMemoryContents);
-		WAVM_ASSERT(newMemory->id == memory->id);
+		const WAVM::Uptr idx = it.getIndex();
+		ignoreIndexList.addOrFail(idx);
+		if(targetCompartment.memories.contains(idx))
+		{
+			Memory* oldMemory = *it;
+			Memory* newMemory = *targetCompartment.memories.get(idx);
+			cloneMemoryInto(newMemory, oldMemory, &targetCompartment, copyMemoryContents);
+		}
+		else
+		{
+			Memory* newMemory = cloneMemory(*it, &targetCompartment, copyMemoryContents);
+			WAVM_ASSERT(newMemory->id == (*it)->id);
+		}
 	}
+	clearRemainingIndexMap(
+		&targetCompartment, targetCompartment.memories, ignoreIndexList, removeList);
 
 	// Clone globals.
 	{
 #ifdef WAVM_HAS_TRACY
 		ZoneNamedN(_zone_mcg, "memcpy Globals", true);
 #endif
-		newCompartment->globalDataAllocationMask = compartment->globalDataAllocationMask;
-		memcpy(newCompartment->initialContextMutableGlobals,
-			   compartment->initialContextMutableGlobals,
-			   sizeof(newCompartment->initialContextMutableGlobals));
+		targetCompartment.globalDataAllocationMask = oldCompartment->globalDataAllocationMask;
+		memcpy(targetCompartment.initialContextMutableGlobals,
+			   oldCompartment->initialContextMutableGlobals,
+			   sizeof(targetCompartment.initialContextMutableGlobals));
 	}
-	for(Global* global : compartment->globals)
+	clearIndexMap(&targetCompartment, targetCompartment.globals);
+	for(Global* global : oldCompartment->globals)
 	{
 #ifdef WAVM_HAS_TRACY
 		ZoneNamedN(_zone_cg, "clone Global", true);
 #endif
-		Global* newGlobal = cloneGlobal(global, newCompartment);
+		Global* newGlobal = cloneGlobal(global, &targetCompartment);
 		WAVM_ASSERT(newGlobal->id == global->id);
 		WAVM_ASSERT(newGlobal->mutableGlobalIndex == global->mutableGlobalIndex);
 	}
 
 	// Clone exception types.
-	for(ExceptionType* exceptionType : compartment->exceptionTypes)
+	clearIndexMap(&targetCompartment, targetCompartment.exceptionTypes);
+	for(ExceptionType* exceptionType : oldCompartment->exceptionTypes)
 	{
 #ifdef WAVM_HAS_TRACY
 		ZoneNamedN(_zone_cet, "clone ExceptionType", true);
 #endif
-		ExceptionType* newExceptionType = cloneExceptionType(exceptionType, newCompartment);
+		ExceptionType* newExceptionType = cloneExceptionType(exceptionType, &targetCompartment);
 		WAVM_ASSERT(newExceptionType->id == exceptionType->id);
 	}
 
 	// Clone instances.
-	for(Instance* instance : compartment->instances)
+	clearIndexMap(&targetCompartment, targetCompartment.instances);
+	for(Instance* instance : oldCompartment->instances)
 	{
 #ifdef WAVM_HAS_TRACY
 		ZoneNamedN(_zone_ci, "clone Instance", true);
 #endif
-		Instance* newInstance = cloneInstance(instance, newCompartment);
+		Instance* newInstance = cloneInstance(instance, &targetCompartment);
 		WAVM_ASSERT(newInstance->id == instance->id);
 	}
 
 	Timing::logTimer("Cloned compartment", timer);
-	return newCompartment;
 }
 
 Object* Runtime::remapToClonedCompartment(const Object* object, const Compartment* newCompartment)

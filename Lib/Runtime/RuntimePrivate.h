@@ -322,6 +322,12 @@ namespace WAVM { namespace Runtime {
 	bool isAddressOwnedByTable(U8* address, Table*& outTable, Uptr& outTableIndex);
 	bool isAddressOwnedByMemory(U8* address, Memory*& outMemory, Uptr& outMemoryAddress);
 
+	// Clones objects into pre-allocated (non-null) targets, overwriting what was there before
+	void cloneMemoryInto(Memory* targetMemory,
+						 const Memory* sourceMemory,
+						 Compartment* newCompartment,
+						 bool copyContents = true);
+
 	// Clones objects into a new compartment with the same ID.
 	Table* cloneTable(Table* memory, Compartment* newCompartment);
 	Memory* cloneMemory(Memory* memory, Compartment* newCompartment, bool copyContents = true);

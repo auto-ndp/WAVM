@@ -174,6 +174,58 @@ Memory* Runtime::cloneMemory(Memory* memory, Compartment* newCompartment, bool c
 	return newMemory;
 }
 
+void Runtime::cloneMemoryInto(Memory* targetMemory,
+							  const Memory* sourceMemory,
+							  Compartment* newCompartment,
+							  bool copyContents)
+{
+#ifdef WAVM_HAS_TRACY
+	ZoneNamedNS(_zone_root, "Runtime::cloneMemoryInto", 6, true);
+#endif
+	Platform::RWMutex::ShareableLock resizingLock(sourceMemory->resizingMutex);
+	targetMemory->type = sourceMemory->type;
+	targetMemory->debugName = sourceMemory->debugName;
+	targetMemory->resourceQuota = sourceMemory->resourceQuota;
+	const auto targetOriginalPageCount = getMemoryNumPages(targetMemory);
+	const auto sourcePageCount = getMemoryNumPages(sourceMemory);
+	if(targetOriginalPageCount < sourcePageCount)
+	{
+		if(growMemory(targetMemory, sourcePageCount - targetOriginalPageCount, nullptr)
+		   != GrowResult::success)
+		{
+			throw std::runtime_error("Couldn't grow memory for cloning from another module");
+		}
+	}
+	else if(targetOriginalPageCount > sourcePageCount)
+	{
+		const auto unmapPageCount = targetOriginalPageCount - sourcePageCount;
+		unmapMemoryPages(targetMemory, sourcePageCount, unmapPageCount);
+	}
+	if(copyContents)
+	{
+#ifdef WAVM_HAS_TRACY
+		ZoneScopedN("memcpy memory content");
+		ZoneValue(sourcePageCount * IR::numBytesPerPage);
+#endif
+		std::copy(reinterpret_cast<const uint64_t*>(sourceMemory->baseAddress),
+				  reinterpret_cast<const uint64_t*>(sourceMemory->baseAddress
+													+ sourcePageCount * IR::numBytesPerPage),
+				  reinterpret_cast<uint64_t*>(targetMemory->baseAddress));
+	}
+	else
+	{
+#ifdef WAVM_HAS_TRACY
+		ZoneScopedN("memset memory content");
+		ZoneValue(sourcePageCount * IR::numBytesPerPage);
+#endif
+		std::fill(reinterpret_cast<uint64_t*>(targetMemory->baseAddress),
+				  reinterpret_cast<uint64_t*>(targetMemory->baseAddress
+													+ sourcePageCount * IR::numBytesPerPage),
+				  uint64_t(0));
+	}
+	// compartment should already be up to date
+}
+
 Runtime::Memory::~Memory()
 {
 	if(id != UINTPTR_MAX)

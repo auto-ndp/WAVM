@@ -319,7 +319,7 @@ namespace WAVM { namespace Runtime {
 	// Returns the type of a Function.
 	WAVM_API IR::FunctionType getFunctionType(const Function* function);
 
-    WAVM_API std::string getFunctionDebugName(const Function* function);
+	WAVM_API std::string getFunctionDebugName(const Function* function);
 
 	//
 	// Tables
@@ -511,8 +511,14 @@ namespace WAVM { namespace Runtime {
 
 	WAVM_API Compartment* createCompartment(std::string&& debugName = "");
 
+	WAVM_API void cloneCompartmentInto(Compartment& targetCompartment,
+									   const Compartment* sourceCompartment,
+									   std::string&& debugName = "",
+									   bool copyMemoryContents = true);
+
 	WAVM_API Compartment* cloneCompartment(const Compartment* compartment,
-										   std::string&& debugName = "", bool copyMemoryContents = true);
+										   std::string&& debugName = "",
+										   bool copyMemoryContents = true);
 
 	WAVM_API Object* remapToClonedCompartment(const Object* object,
 											  const Compartment* newCompartment);
