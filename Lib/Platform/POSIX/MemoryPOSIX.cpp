@@ -70,7 +70,7 @@ U8* Platform::allocateVirtualPages(Uptr numPages)
 	}
 	madvise(result, numBytes, MADV_HUGEPAGE);
 #ifdef WAVM_HAS_TRACY
-	TracyAllocNS(result, numBytes, 6, "WAVM-mmap");
+	TracyAllocNS(result, numBytes, 6, "WAVM");
 #endif
 	return (U8*)result;
 }
@@ -111,7 +111,7 @@ U8* Platform::allocateAlignedVirtualPages(Uptr numPages,
 		outUnalignedBaseAddress = result;
 		madvise(result, numBytes, MADV_HUGEPAGE);
 #ifdef WAVM_HAS_TRACY
-		TracyAllocNS(result, numBytes, 6, "WAVM-almmap");
+		TracyAllocNS(result, numBytes, 6, "WAVM");
 #endif
 		return result;
 	}
@@ -184,7 +184,7 @@ void Platform::freeVirtualPages(U8* baseVirtualAddress, Uptr numPages)
 					   strerror(errno));
 	}
 #ifdef WAVM_HAS_TRACY
-	TracyFreeNS(baseVirtualAddress, 6, "WAVM-munmap");
+	TracyFreeNS(baseVirtualAddress, 6, "WAVM");
 #endif
 }
 
@@ -199,7 +199,7 @@ void Platform::freeAlignedVirtualPages(U8* unalignedBaseAddress, Uptr numPages, 
 					   strerror(errno));
 	}
 #ifdef WAVM_HAS_TRACY
-	TracyFreeNS(unalignedBaseAddress, 6, "WAVM-almunmap");
+	TracyFreeNS(unalignedBaseAddress, 6, "WAVM");
 #endif
 }
 
