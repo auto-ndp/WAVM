@@ -119,7 +119,7 @@ namespace {
 		}
 		for(WAVM::Uptr idx : removeList)
 		{
-			T p = indexMap.get(idx);
+			T p = *indexMap.get(idx);
 			Runtime::GCObject* gp = p;
 			if(gp->compartment == ownerCompartment)
 			{
@@ -136,8 +136,8 @@ namespace {
 
 WAVM_API void Runtime::cloneCompartmentInto(Compartment& targetCompartment,
 											const Compartment* oldCompartment,
-											std::string&& debugName = "",
-											bool copyMemoryContents = true)
+											std::string&& debugName,
+											bool copyMemoryContents)
 {
 #ifdef WAVM_HAS_TRACY
 	ZoneNamedNS(_zone_root, "Runtime::cloneCompartmentInto", 6, true);
