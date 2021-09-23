@@ -314,8 +314,8 @@ Instance* Runtime::instantiateModuleInternal(Compartment* compartment,
 			= disassemblyNames.functions[module->ir.functions.imports.size() + functionDefIndex]
 				  .name;
 		std::string debugName;
-		debugName.reserve(7 + moduleDebugName.size() + origDebugName.empty() ? 16
-																			 : debugName.size());
+		debugName.reserve(7 + moduleDebugName.size()
+						  + (origDebugName.empty() ? 16 : debugName.size()));
 		debugName.insert(debugName.size(), "wasm!");
 		debugName.insert(debugName.size(), moduleDebugName);
 		debugName.push_back('!');
