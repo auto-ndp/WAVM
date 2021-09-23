@@ -118,11 +118,15 @@ Instance* Intrinsics::instantiateModule(
 	std::vector<FunctionImportBinding> functionImportBindings;
 	for(const Intrinsics::Module* moduleRef : moduleRefs)
 	{
-#ifdef WAVM_HAS_TRACY
-		ZoneScopedN("module");
-#endif
 		if(moduleRef->impl)
 		{
+			size_t reserveSize = moduleRef->impl->functionMap.size();
+			functionImportBindings.reserve(reserveSize);
+			irModule.types.reserve(reserveSize);
+			irModule.types.reserve(reserveSize);
+			irModule.functions.imports.reserve(reserveSize);
+			irModule.imports.reserve(reserveSize);
+			names.functions.reserve(reserveSize);
 			for(const auto& pair : moduleRef->impl->functionMap)
 			{
 				functionImportBindings.push_back({pair.value->getNativeFunction()});
@@ -196,13 +200,17 @@ Instance* Intrinsics::instantiateModule(
 		}
 	}
 
+	{
+		size_t reserveSize = irModule.functions.imports.size();
+		irModule.types.reserve(reserveSize);
+		irModule.functions.defs.reserve(reserveSize);
+		names.functions.reserve(reserveSize);
+		irModule.exports.reserve(reserveSize);
+	}
 	// Generate thunks for the intrinsic functions.
 	for(Uptr functionImportIndex = 0; functionImportIndex < irModule.functions.imports.size();
 		++functionImportIndex)
 	{
-#ifdef WAVM_HAS_TRACY
-		ZoneScopedN("function");
-#endif
 		const FunctionImport& functionImport = irModule.functions.imports[functionImportIndex];
 		const FunctionType intrinsicFunctionType = irModule.types[functionImport.type.index];
 		const FunctionType wasmFunctionType(intrinsicFunctionType.results(),
@@ -229,9 +237,6 @@ Instance* Intrinsics::instantiateModule(
 	}
 
 	{
-#ifdef WAVM_HAS_TRACY
-		ZoneNamedN(_z2, "Disassembly names", true);
-#endif
 		setDisassemblyNames(irModule, names);
 	}
 
@@ -252,7 +257,13 @@ Instance* Intrinsics::instantiateModule(
 		}
 	}
 
-	ModuleRef module = compileModule(irModule);
+	ModuleRef module;
+	{
+#ifdef WAVM_HAS_TRACY
+		ZoneNamedN(_zc, "compileModule", true);
+#endif
+		module = compileModule(irModule);
+	}
 	Instance* instance = instantiateModuleInternal(compartment,
 												   module,
 												   std::move(functionImportBindings),
