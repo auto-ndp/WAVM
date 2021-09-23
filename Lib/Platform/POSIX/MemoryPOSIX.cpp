@@ -11,10 +11,6 @@
 #include "WAVM/Platform/Memory.h"
 #include "WAVM/Platform/Mutex.h"
 
-#ifdef WAVM_HAS_TRACY
-#include <Tracy.hpp>
-#endif
-
 #ifdef __APPLE__
 #define MAP_ANONYMOUS MAP_ANON
 #endif
@@ -69,9 +65,6 @@ U8* Platform::allocateVirtualPages(Uptr numPages)
 		return nullptr;
 	}
 	madvise(result, numBytes, MADV_HUGEPAGE);
-#ifdef WAVM_HAS_TRACY
-	TracyAllocNS(result, numBytes, 6, "WAVM");
-#endif
 	return (U8*)result;
 }
 
@@ -110,9 +103,6 @@ U8* Platform::allocateAlignedVirtualPages(Uptr numPages,
 
 		outUnalignedBaseAddress = result;
 		madvise(result, numBytes, MADV_HUGEPAGE);
-#ifdef WAVM_HAS_TRACY
-		TracyAllocNS(result, numBytes, 6, "WAVM");
-#endif
 		return result;
 	}
 	else
@@ -183,9 +173,6 @@ void Platform::freeVirtualPages(U8* baseVirtualAddress, Uptr numPages)
 					   numPages << getBytesPerPageLog2(),
 					   strerror(errno));
 	}
-#ifdef WAVM_HAS_TRACY
-	TracyFreeNS(baseVirtualAddress, 6, "WAVM");
-#endif
 }
 
 void Platform::freeAlignedVirtualPages(U8* unalignedBaseAddress, Uptr numPages, Uptr alignmentLog2)
@@ -198,9 +185,6 @@ void Platform::freeAlignedVirtualPages(U8* unalignedBaseAddress, Uptr numPages, 
 					   numPages << getBytesPerPageLog2(),
 					   strerror(errno));
 	}
-#ifdef WAVM_HAS_TRACY
-	TracyFreeNS(unalignedBaseAddress, 6, "WAVM");
-#endif
 }
 
 Uptr Platform::getPeakMemoryUsageBytes()
