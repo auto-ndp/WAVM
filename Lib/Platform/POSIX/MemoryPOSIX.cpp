@@ -184,7 +184,7 @@ void Platform::freeVirtualPages(U8* baseVirtualAddress, Uptr numPages)
 					   strerror(errno));
 	}
 #ifdef WAVM_HAS_TRACY
-	TracyFreeNS(baseVirtualAddress, 6, "WAVM-mmap");
+	TracyFreeNS(baseVirtualAddress, 6, "WAVM-munmap");
 #endif
 }
 
@@ -199,7 +199,7 @@ void Platform::freeAlignedVirtualPages(U8* unalignedBaseAddress, Uptr numPages, 
 					   strerror(errno));
 	}
 #ifdef WAVM_HAS_TRACY
-	TracyFreeNS(unalignedBaseAddress, 6, "WAVM-mmap");
+	TracyFreeNS(unalignedBaseAddress, 6, "WAVM-almunmap");
 #endif
 }
 
