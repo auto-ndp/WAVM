@@ -329,7 +329,7 @@ struct POSIXFD : VFD
 			if(numBufferBytes > UINT32_MAX) { return Result::tooManyBufferBytes; }
 
 			// Allocate a combined buffer.
-			U8* combinedBuffer = (U8*)malloc(numBufferBytes);
+			U8* combinedBuffer = new U8[numBufferBytes];
 			if(!combinedBuffer) { return Result::outOfMemory; }
 
 			// Do the read.
@@ -358,7 +358,7 @@ struct POSIXFD : VFD
 			}
 
 			// Free the combined buffer.
-			free(combinedBuffer);
+			delete[] combinedBuffer;
 
 			return vfsResult;
 		}
@@ -400,7 +400,7 @@ struct POSIXFD : VFD
 			if(numBufferBytes > UINT32_MAX) { return Result::tooManyBufferBytes; }
 
 			// Allocate a combined buffer.
-			U8* combinedBuffer = (U8*)malloc(numBufferBytes);
+			U8* combinedBuffer = new U8[numBufferBytes];
 			if(!combinedBuffer) { return Result::outOfMemory; }
 
 			// Copy the individual buffers into the combined buffer.
@@ -424,7 +424,7 @@ struct POSIXFD : VFD
 			if(outNumBytesWritten) { *outNumBytesWritten = Uptr(result); }
 
 			// Free the combined buffer.
-			free(combinedBuffer);
+			delete[] combinedBuffer;
 
 			return vfsResult;
 		}
