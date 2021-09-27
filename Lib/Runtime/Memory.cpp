@@ -199,6 +199,11 @@ void Runtime::cloneMemoryInto(Memory* targetMemory,
 	else if(targetOriginalPageCount > sourcePageCount)
 	{
 		const auto unmapPageCount = targetOriginalPageCount - sourcePageCount;
+		std::fill(reinterpret_cast<uint64_t*>(targetMemory->baseAddress
+											  + sourcePageCount * IR::numBytesPerPage),
+				  reinterpret_cast<uint64_t*>(targetMemory->baseAddress
+											  + targetOriginalPageCount * IR::numBytesPerPage),
+				  uint64_t(0));
 		unmapMemoryPages(targetMemory, sourcePageCount, unmapPageCount);
 		if(targetMemory->resourceQuota)
 		{
