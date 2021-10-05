@@ -73,7 +73,7 @@ static Table* createTableImpl(Compartment* compartment,
 	// In 64-bit, allocate enough address-space to safely access 32-bit table indices without bounds
 	// checking, or 16MB (4M elements) if the host is 32-bit.
 	const Uptr pageBytesLog2 = Platform::getBytesPerPageLog2();
-	const U64 tableMaxElements = Uptr(1) << 32;
+	const U64 tableMaxElements = IR::maxTableElems;
 	const U64 tableMaxBytes = sizeof(Table::Element) * tableMaxElements;
 	const U64 tableMaxPages = tableMaxBytes >> pageBytesLog2;
 
