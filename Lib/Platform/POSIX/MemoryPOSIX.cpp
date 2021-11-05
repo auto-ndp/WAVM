@@ -162,14 +162,22 @@ void Platform::decommitVirtualPages(U8* baseVirtualAddress, Uptr numPages)
 {
 	WAVM_ERROR_UNLESS(isPageAligned(baseVirtualAddress));
 	auto numBytes = numPages << getBytesPerPageLog2();
-	if(mmap(baseVirtualAddress, numBytes, PROT_NONE, MAP_FIXED | MAP_PRIVATE | MAP_ANONYMOUS, -1, 0)
-	   == MAP_FAILED)
+	if(madvise(baseVirtualAddress, numBytes, MADV_DONTNEED) < 0)
 	{
-		Errors::fatalf("mmap(0x%" WAVM_PRIxPTR ", %" WAVM_PRIuPTR
-					   ", PROT_NONE, MAP_FIXED | MAP_PRIVATE | MAP_ANONYMOUS, -1, 0) failed: %s",
+		Errors::fatalf("madvise(0x%" WAVM_PRIxPTR ", %" WAVM_PRIuPTR ", MADV_DONTNEED) failed: %s",
 					   reinterpret_cast<Uptr>(baseVirtualAddress),
 					   numBytes,
 					   strerror(errno));
+	}
+	int result = mprotect(baseVirtualAddress, numBytes, PROT_NONE);
+	if(result != 0)
+	{
+		fprintf(stderr,
+				"mprotect(0x%" WAVM_PRIxPTR ", %" WAVM_PRIuPTR ", PROT_NONE) failed: %s\n",
+				reinterpret_cast<Uptr>(baseVirtualAddress),
+				numPages << getBytesPerPageLog2(),
+				strerror(errno));
+		dumpErrorCallStack(0);
 	}
 }
 
