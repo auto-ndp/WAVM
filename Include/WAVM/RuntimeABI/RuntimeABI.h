@@ -56,8 +56,6 @@ namespace WAVM { namespace Runtime {
 
 	static constexpr Uptr contextNumBytes = 16384;
 	static constexpr Uptr maxThunkArgAndReturnBytes = 256;
-
-	static constexpr Uptr contextRuntimeDataAlignment = 8 * pageSize;
 	static constexpr Uptr maxMutableGlobals
 		= (contextNumBytes - maxThunkArgAndReturnBytes - sizeof(Context*))
 		  / sizeof(IR::UntaggedValue);
@@ -119,13 +117,8 @@ namespace WAVM { namespace Runtime {
 		= (compartmentReservedBytes - offsetof(CompartmentRuntimeData, contexts))
 		  / sizeof(ContextRuntimeData);
 
-	//static constexpr Uptr maxContexts
-	//	= (512 * 1024) - (offsetof(CompartmentRuntimeData, contexts) / 
-    //     sizeof(ContextRuntimeData));
-
-	static_assert(offsetof(CompartmentRuntimeData, contexts) % pageSize == 0,
+	static_assert(offsetof(CompartmentRuntimeData, contexts) % 4096 == 0,
 				  "CompartmentRuntimeData::contexts isn't page-aligned");
-
 	static_assert(U64(offsetof(CompartmentRuntimeData, contexts))
 						  + U64(maxContexts) * sizeof(ContextRuntimeData)
 					  == compartmentReservedBytes,

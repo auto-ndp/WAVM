@@ -72,9 +72,6 @@ static Table* createTableImpl(Compartment* compartment,
 {
 	Table* table = new Table(compartment, type, std::move(debugName), resourceQuota);
 
-	// In 64-bit, allocate enough address-space to safely access 32-bit table indices without bounds
-	// checking, or 16MB (4M elements) if the host is 32-bit.
-	const Uptr pageBytesLog2 = Platform::getBytesPerPageLog2();
 	const U64 tableMaxElements = std::min(
 		type.size.max, type.indexType == IR::IndexType::i32 ? maxTable32Elems : maxTable64Elems);
 	const U64 tableMaxBytes = sizeof(Table::Element) * tableMaxElements;
@@ -218,7 +215,7 @@ void Runtime::cloneTableInto(Table* targetTable,
 
 	// Create the new table.
 	const Uptr numElements = sourceTable->numElements.load(std::memory_order_acquire);
-	if(targetTable->type != sourceTable->type)
+	if(targetTable->indexType != sourceTable->indexType)
 	{
 		throw std::runtime_error("Mismatched table types when cloning module");
 	}
@@ -615,7 +612,9 @@ WAVM_DEFINE_INTRINSIC_FUNCTION(wavmIntrinsicsTable,
 				 &oldNumElements,
 				 initialValue ? initialValue : getUninitializedElement())
 	   != GrowResult::success)
-	{ return -1; }
+	{
+		return -1;
+	}
 	WAVM_ASSERT(oldNumElements <= INTPTR_MAX);
 	return Iptr(oldNumElements);
 }

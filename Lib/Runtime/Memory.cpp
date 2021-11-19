@@ -195,7 +195,11 @@ void Runtime::cloneMemoryInto(Memory* targetMemory,
 	ZoneNamedNS(_zone_root, "Runtime::cloneMemoryInto", 6, true);
 #endif
 	Platform::RWMutex::ShareableLock resizingLock(sourceMemory->resizingMutex);
-	targetMemory->type = sourceMemory->type;
+	if(targetMemory->indexType != sourceMemory->indexType)
+	{
+		throw std::runtime_error(
+			"Mismatched index types of memories between source and target cloned memory");
+	}
 	targetMemory->debugName = sourceMemory->debugName;
 	targetMemory->resourceQuota = sourceMemory->resourceQuota;
 	const auto targetOriginalPageCount = getMemoryNumPages(targetMemory);

@@ -516,12 +516,10 @@ namespace WAVM { namespace Runtime {
 
 	WAVM_API void cloneCompartmentInto(Compartment& targetCompartment,
 									   const Compartment* sourceCompartment,
-									   std::string&& debugName = "",
-									   bool copyMemoryContents = true);
+									   std::string&& debugName = "");
 
 	WAVM_API Compartment* cloneCompartment(const Compartment* compartment,
-										   std::string&& debugName = "",
-										   bool copyMemoryContents = true);
+										   std::string&& debugName = "");
 
 	WAVM_API Object* remapToClonedCompartment(const Object* object,
 											  const Compartment* newCompartment);

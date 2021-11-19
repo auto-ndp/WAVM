@@ -345,7 +345,7 @@ namespace WAVM { namespace Runtime {
 
 	// Clones objects into a new compartment with the same ID.
 	Table* cloneTable(Table* memory, Compartment* newCompartment);
-	Memory* cloneMemory(Memory* memory, Compartment* newCompartment, bool copyContents = true);
+	Memory* cloneMemory(Memory* memory, Compartment* newCompartment);
 	ExceptionType* cloneExceptionType(ExceptionType* exceptionType, Compartment* newCompartment);
 	Instance* cloneInstance(Instance* instance, Compartment* newCompartment);
 

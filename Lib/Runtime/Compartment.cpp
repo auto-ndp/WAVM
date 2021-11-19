@@ -80,8 +80,7 @@ Compartment* Runtime::createCompartment(std::string&& debugName)
 }
 
 Compartment* Runtime::cloneCompartment(const Compartment* compartment,
-									   std::string&& debugName,
-									   bool copyMemoryContents)
+									   std::string&& debugName)
 {
 	Compartment* newCompartment;
 
@@ -96,7 +95,7 @@ Compartment* Runtime::cloneCompartment(const Compartment* compartment,
 		newCompartment = new Compartment(std::move(debugName), runtimeData, unalignedRuntimeData);;
 	}
 	Runtime::cloneCompartmentInto(
-		*newCompartment, compartment, std::move(debugName), copyMemoryContents);
+		*newCompartment, compartment, std::move(debugName));
 	return newCompartment;
 }
 
@@ -151,8 +150,7 @@ namespace {
 
 WAVM_API void Runtime::cloneCompartmentInto(Compartment& targetCompartment,
 											const Compartment* oldCompartment,
-											std::string&& debugName,
-											bool copyMemoryContents)
+											std::string&& debugName)
 {
 #ifdef WAVM_HAS_TRACY
 	ZoneNamedNS(_zone_root, "Runtime::cloneCompartmentInto", 6, true);
@@ -199,11 +197,11 @@ WAVM_API void Runtime::cloneCompartmentInto(Compartment& targetCompartment,
 		{
 			const Memory* oldMemory = *it;
 			Memory* newMemory = *targetCompartment.memories.get(idx);
-			cloneMemoryInto(newMemory, oldMemory, &targetCompartment, copyMemoryContents);
+			cloneMemoryInto(newMemory, oldMemory, &targetCompartment);
 		}
 		else
 		{
-			Memory* newMemory = cloneMemory(*it, &targetCompartment, copyMemoryContents);
+			Memory* newMemory = cloneMemory(*it, &targetCompartment);
 			WAVM_ASSERT(newMemory->id == (*it)->id);
 		}
 	}

@@ -3,6 +3,7 @@
 #include <string.h>
 #include <algorithm>
 #include <string>
+#include <stdexcept>
 #include <vector>
 #include "WAVM/Inline/Assert.h"
 #include "WAVM/Inline/BasicTypes.h"
