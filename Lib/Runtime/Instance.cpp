@@ -54,6 +54,16 @@ static Value evaluateInitializer(const std::vector<Global*>& moduleGlobals,
 	};
 }
 
+static Uptr getIndexValue(const Value& value, IndexType indexType)
+{
+	switch(indexType)
+	{
+	case IndexType::i32: WAVM_ASSERT(value.type == ValueType::i32); return value.u32;
+	case IndexType::i64: WAVM_ASSERT(value.type == ValueType::i64); return value.u64;
+	default: WAVM_UNREACHABLE();
+	};
+}
+
 Instance::~Instance()
 {
 	if(id != UINTPTR_MAX)
@@ -98,14 +108,15 @@ Instance* Runtime::instantiateModule(Compartment* compartment,
 		}
 		case ExternKind::table: {
 			Table* table = asTable(importObject);
-			WAVM_ERROR_UNLESS(isSubtype(table->type, module->ir.tables.getType(kindIndex.index)));
+			WAVM_ERROR_UNLESS(
+				isSubtype(getTableType(table), module->ir.tables.getType(kindIndex.index)));
 			tableImports.push_back(table);
 			break;
 		}
 		case ExternKind::memory: {
 			Memory* memory = asMemory(importObject);
 			WAVM_ERROR_UNLESS(
-				isSubtype(memory->type, module->ir.memories.getType(kindIndex.index)));
+				isSubtype(getMemoryType(memory), module->ir.memories.getType(kindIndex.index)));
 			memoryImports.push_back(memory);
 			break;
 		}
@@ -453,8 +464,8 @@ Instance* Runtime::instantiateModuleInternal(Compartment* compartment,
 
 			const Value baseOffsetValue
 				= evaluateInitializer(instance->globals, dataSegment.baseOffset);
-			WAVM_ERROR_UNLESS(baseOffsetValue.type == ValueType::i32);
-			const U32 baseOffset = baseOffsetValue.i32;
+			const MemoryType& memoryType = module->ir.memories.getType(dataSegment.memoryIndex);
+			Uptr baseOffset = getIndexValue(baseOffsetValue, memoryType.indexType);
 
 			initDataSegment(instance,
 							segmentIndex,
@@ -476,8 +487,8 @@ Instance* Runtime::instantiateModuleInternal(Compartment* compartment,
 
 			const Value baseOffsetValue
 				= evaluateInitializer(instance->globals, elemSegment.baseOffset);
-			WAVM_ERROR_UNLESS(baseOffsetValue.type == ValueType::i32);
-			const U32 baseOffset = baseOffsetValue.i32;
+			const TableType& tableType = module->ir.tables.getType(elemSegment.tableIndex);
+			Uptr baseOffset = getIndexValue(baseOffsetValue, tableType.indexType);
 
 			Uptr numElements = 0;
 			switch(elemSegment.contents->encoding)
@@ -635,7 +646,7 @@ Table* Runtime::getTypedInstanceExport(const Instance* instance,
 	WAVM_ASSERT(instance);
 	Object* const* exportedObjectPtr = instance->exportMap.get(name);
 	return exportedObjectPtr && (*exportedObjectPtr)->kind == ObjectKind::table
-				   && isSubtype(asTable(*exportedObjectPtr)->type, type)
+				   && isSubtype(getTableType(asTable(*exportedObjectPtr)), type)
 			   ? asTable(*exportedObjectPtr)
 			   : nullptr;
 }
@@ -647,7 +658,7 @@ Memory* Runtime::getTypedInstanceExport(const Instance* instance,
 	WAVM_ASSERT(instance);
 	Object* const* exportedObjectPtr = instance->exportMap.get(name);
 	return exportedObjectPtr && (*exportedObjectPtr)->kind == ObjectKind::memory
-				   && isSubtype(asMemory(*exportedObjectPtr)->type, type)
+				   && isSubtype(getMemoryType(asMemory(*exportedObjectPtr)), type)
 			   ? asMemory(*exportedObjectPtr)
 			   : nullptr;
 }

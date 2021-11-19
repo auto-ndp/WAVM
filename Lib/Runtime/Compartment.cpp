@@ -18,9 +18,12 @@
 using namespace WAVM;
 using namespace WAVM::Runtime;
 
-Runtime::Compartment::Compartment(std::string&& inDebugName)
+Runtime::Compartment::Compartment(std::string&& inDebugName,
+								  struct CompartmentRuntimeData* inRuntimeData,
+								  U8* inUnalignedRuntimeData)
 : GCObject(ObjectKind::compartment, this, std::move(inDebugName))
-, unalignedRuntimeData(nullptr)
+, runtimeData(inRuntimeData)
+, unalignedRuntimeData(inUnalignedRuntimeData)
 , tables(0, maxTables - 1)
 , memories(0, maxMemories - 1)
 // Use UINTPTR_MAX as an invalid ID for globals, exception types, and instances.
@@ -30,16 +33,6 @@ Runtime::Compartment::Compartment(std::string&& inDebugName)
 , contexts(0, maxContexts - 1)
 , foreigns(0, UINTPTR_MAX - 1)
 {
-	runtimeData = (CompartmentRuntimeData*)Platform::allocateAlignedVirtualPages(
-		wavmCompartmentReservedBytes >> Platform::getBytesPerPageLog2(),
-		compartmentRuntimeDataAlignmentLog2,
-		unalignedRuntimeData);
-
-	WAVM_ERROR_UNLESS(Platform::commitVirtualPages(
-		(U8*)runtimeData,
-		offsetof(CompartmentRuntimeData, contexts) >> Platform::getBytesPerPageLog2()));
-	Platform::registerVirtualAllocation(offsetof(CompartmentRuntimeData, contexts));
-
 	runtimeData->compartment = this;
 }
 
@@ -55,18 +48,35 @@ Runtime::Compartment::~Compartment()
 	WAVM_ASSERT(!contexts.size());
 	WAVM_ASSERT(!foreigns.size());
 
-	Platform::freeAlignedVirtualPages(
-		unalignedRuntimeData,
-		wavmCompartmentReservedBytes >> Platform::getBytesPerPageLog2(),
-		compartmentRuntimeDataAlignmentLog2);
+	Platform::freeAlignedVirtualPages(unalignedRuntimeData,
+									  compartmentReservedBytes >> Platform::getBytesPerPageLog2(),
+									  compartmentRuntimeDataAlignmentLog2);
 	Platform::deregisterVirtualAllocation(offsetof(CompartmentRuntimeData, contexts));
-	runtimeData = nullptr;
-	unalignedRuntimeData = nullptr;
+}
+
+static CompartmentRuntimeData* initCompartmentRuntimeData(U8*& outUnalignedRuntimeData)
+{
+	CompartmentRuntimeData* runtimeData
+		= (CompartmentRuntimeData*)Platform::allocateAlignedVirtualPages(
+			compartmentReservedBytes >> Platform::getBytesPerPageLog2(),
+			compartmentRuntimeDataAlignmentLog2,
+			outUnalignedRuntimeData);
+
+	WAVM_ERROR_UNLESS(Platform::commitVirtualPages(
+		(U8*)runtimeData,
+		offsetof(CompartmentRuntimeData, contexts) >> Platform::getBytesPerPageLog2()));
+	Platform::registerVirtualAllocation(offsetof(CompartmentRuntimeData, contexts));
+
+	return runtimeData;
 }
 
 Compartment* Runtime::createCompartment(std::string&& debugName)
 {
-	return new Compartment(std::move(debugName));
+	U8* unalignedRuntimeData = nullptr;
+	CompartmentRuntimeData* runtimeData = initCompartmentRuntimeData(unalignedRuntimeData);
+	if(!runtimeData) { return nullptr; }
+
+	return new Compartment(std::move(debugName), runtimeData, unalignedRuntimeData);
 }
 
 Compartment* Runtime::cloneCompartment(const Compartment* compartment,
@@ -74,11 +84,16 @@ Compartment* Runtime::cloneCompartment(const Compartment* compartment,
 									   bool copyMemoryContents)
 {
 	Compartment* newCompartment;
+
+	U8* unalignedRuntimeData = nullptr;
+	CompartmentRuntimeData* runtimeData = initCompartmentRuntimeData(unalignedRuntimeData);
+	if(!runtimeData) { return nullptr; }
+
 	{
 #ifdef WAVM_HAS_TRACY
 		ZoneNamedN(_zone_nc, "new Compartment", true);
 #endif
-		newCompartment = new Compartment(std::move(debugName));
+		newCompartment = new Compartment(std::move(debugName), runtimeData, unalignedRuntimeData);;
 	}
 	Runtime::cloneCompartmentInto(
 		*newCompartment, compartment, std::move(debugName), copyMemoryContents);
