@@ -103,7 +103,7 @@ const TypeTuple::Impl* IR::TypeTuple::getUniqueImpl(Uptr numElems, const ValueTy
 		if(typeTuple) { return typeTuple->impl; }
 		else
 		{
-			Impl* globalImpl = new(operator new(numImplBytes)) Impl(*localImpl);
+			Impl* globalImpl = new(malloc(numImplBytes)) Impl(*localImpl);
 			globalUniqueTypeTuples.set.addOrFail(TypeTuple(globalImpl));
 			globalUniqueTypeTuples.impls.push_back(globalImpl);
 			return globalImpl;
@@ -169,7 +169,7 @@ const FunctionType::Impl* IR::FunctionType::getUniqueImpl(TypeTuple results,
 		if(functionType) { return functionType->impl; }
 		else
 		{
-			Impl* globalImpl = new(operator new(sizeof(Impl))) Impl(localImpl);
+			Impl* globalImpl = new(malloc(sizeof(Impl))) Impl(localImpl);
 			globalUniqueFunctionTypes.set.addOrFail(FunctionType(globalImpl));
 			globalUniqueFunctionTypes.impls.push_back(globalImpl);
 			return globalImpl;

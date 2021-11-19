@@ -405,28 +405,28 @@ void EmitFunctionContext::call_indirect(CallIndirectImm imm)
 // causes type mismatches at runtime. As a temporary hack I'm removing the type check on
 // call_indirect in the generated code.
 
-	// auto elementTypeId = loadFromUntypedPointer(
-	// 	irBuilder.CreateInBoundsGEP(
-	// 		runtimeFunction,
-	// 		emitLiteralIptr(offsetof(Runtime::Function, encodedType), moduleContext.iptrType)),
-	// 	moduleContext.iptrType,
-	// 	moduleContext.iptrAlignment);
-	// auto calleeTypeId = moduleContext.typeIds[imm.type.index];
+	auto elementTypeId = loadFromUntypedPointer(
+		irBuilder.CreateInBoundsGEP(
+			runtimeFunction,
+			emitLiteralIptr(offsetof(Runtime::Function, encodedType), moduleContext.iptrType)),
+		moduleContext.iptrType,
+		moduleContext.iptrAlignment);
+	auto calleeTypeId = moduleContext.typeIds[imm.type.index];
 
-	// // If the function type doesn't match, trap.
-	// emitConditionalTrapIntrinsic(
-	// 	irBuilder.CreateICmpNE(calleeTypeId, elementTypeId),
-	// 	"callIndirectFail",
-	// 	FunctionType(TypeTuple(),
-	// 				 TypeTuple({moduleContext.iptrValueType,
-	// 							moduleContext.iptrValueType,
-	// 							ValueType::funcref,
-	// 							moduleContext.iptrValueType}),
-	// 				 IR::CallingConvention::intrinsic),
-	// 	{elementIndex,
-	// 	 getTableIdFromOffset(moduleContext.tableOffsets[imm.tableIndex]),
-	// 	 irBuilder.CreatePointerCast(runtimeFunction, llvmContext.externrefType),
-	// 	 calleeTypeId});
+	// If the function type doesn't match, trap.
+	emitConditionalTrapIntrinsic(
+		irBuilder.CreateICmpNE(calleeTypeId, elementTypeId),
+		"callIndirectFail",
+		FunctionType(TypeTuple(),
+					 TypeTuple({moduleContext.iptrValueType,
+								moduleContext.iptrValueType,
+								ValueType::funcref,
+								moduleContext.iptrValueType}),
+					 IR::CallingConvention::intrinsic),
+		{elementIndex,
+		 getTableIdFromOffset(moduleContext.tableOffsets[imm.tableIndex]),
+		 irBuilder.CreatePointerCast(runtimeFunction, llvmContext.externrefType),
+		 calleeTypeId});
 
 	// Call the function loaded from the table.
 	auto functionPointer = irBuilder.CreatePointerCast(

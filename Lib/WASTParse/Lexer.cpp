@@ -281,8 +281,8 @@ Token* WAST::lex(const char* string,
 
 	// Allocate enough memory up front for a token and newline for each character in the input
 	// string.
-	Token* tokens = (Token*)operator new(sizeof(Token) * (stringLength + 1));
-	U32* lineStarts = (U32*)operator new(sizeof(U32) * (stringLength + 2));
+	Token* tokens = (Token*)malloc(sizeof(Token) * (stringLength + 1));
+	U32* lineStarts = (U32*)malloc(sizeof(U32) * (stringLength + 2));
 
 	Token* nextToken = tokens;
 	U32* nextLineStart = lineStarts;
@@ -424,11 +424,11 @@ Token* WAST::lex(const char* string,
 	return tokens;
 }
 
-void WAST::freeTokens(Token* tokens) { operator delete(tokens); }
+void WAST::freeTokens(Token* tokens) { free(tokens); }
 
 void WAST::freeLineInfo(LineInfo* lineInfo)
 {
-	operator delete(lineInfo->lineStarts);
+	free(lineInfo->lineStarts);
 	delete lineInfo;
 }
 
