@@ -431,6 +431,9 @@ namespace WAVM { namespace Runtime {
 	typedef const std::shared_ptr<Module>& ModuleRefParam;
 	typedef const std::shared_ptr<const Module>& ModuleConstRefParam;
 
+	// Compiles an IR module to object code, skipping the global cache and allowing for cross-compilation
+	WAVM_API std::vector<U8> precompileModule(const IR::Module& irModule, const std::string& targetArch, const std::string& targetCpu);
+
 	// Compiles an IR module to object code.
 	WAVM_API ModuleRef compileModule(const IR::Module& irModule);
 
