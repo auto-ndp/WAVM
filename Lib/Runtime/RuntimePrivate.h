@@ -339,8 +339,7 @@ namespace WAVM { namespace Runtime {
 	// Clones objects into pre-allocated (non-null) targets, overwriting what was there before
 	void cloneMemoryInto(Memory* targetMemory,
 						 const Memory* sourceMemory,
-						 Compartment* newCompartment,
-						 bool copyContents = true);
+						 Compartment* newCompartment);
 	void cloneTableInto(Table* targetTable, const Table* sourceTable, Compartment* newCompartment);
 
 	// Clones objects into a new compartment with the same ID.

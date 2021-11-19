@@ -177,7 +177,7 @@ Exception* Runtime::createException(ExceptionType* type,
 	WAVM_ASSERT(numArguments == params.size());
 
 	const bool isUserException = type->compartment != nullptr;
-	Exception* exception = new(operator new(Exception::calcNumBytes(params.size())))
+	Exception* exception = new(malloc(Exception::calcNumBytes(params.size())))
 		Exception(type->id, type, isUserException, std::move(callStack));
 	if(params.size())
 	{ memcpy(exception->arguments, arguments, sizeof(IR::UntaggedValue) * params.size()); }
@@ -187,7 +187,7 @@ Exception* Runtime::createException(ExceptionType* type,
 void Runtime::destroyException(Exception* exception)
 {
 	exception->~Exception();
-	operator delete(exception);
+	free(exception);
 }
 
 ExceptionType* Runtime::getExceptionType(const Exception* exception) { return exception->type; }

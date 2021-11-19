@@ -188,8 +188,7 @@ Memory* Runtime::cloneMemory(Memory* memory, Compartment* newCompartment)
 
 void Runtime::cloneMemoryInto(Memory* targetMemory,
 							  const Memory* sourceMemory,
-							  Compartment* newCompartment,
-							  bool copyContents)
+							  Compartment* newCompartment)
 {
 #ifdef WAVM_HAS_TRACY
 	ZoneNamedNS(_zone_root, "Runtime::cloneMemoryInto", 6, true);
@@ -232,7 +231,6 @@ void Runtime::cloneMemoryInto(Memory* targetMemory,
 				sourcePageCount, std::memory_order_release);
 		}
 	}
-	if(copyContents)
 	{
 #ifdef WAVM_HAS_TRACY
 		ZoneScopedN("memcpy memory content");
@@ -242,17 +240,6 @@ void Runtime::cloneMemoryInto(Memory* targetMemory,
 				  reinterpret_cast<const uint64_t*>(sourceMemory->baseAddress
 													+ sourcePageCount * IR::numBytesPerPage),
 				  reinterpret_cast<uint64_t*>(targetMemory->baseAddress));
-	}
-	else
-	{
-#ifdef WAVM_HAS_TRACY
-		ZoneScopedN("memset memory content");
-		ZoneValue(sourcePageCount * IR::numBytesPerPage);
-#endif
-		std::fill(reinterpret_cast<uint64_t*>(targetMemory->baseAddress),
-				  reinterpret_cast<uint64_t*>(targetMemory->baseAddress
-											  + sourcePageCount * IR::numBytesPerPage),
-				  uint64_t(0));
 	}
 	// compartment should already be up to date
 }
