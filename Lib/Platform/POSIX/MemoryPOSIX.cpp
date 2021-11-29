@@ -3,6 +3,7 @@
 #include <sys/mman.h>
 #include <sys/resource.h>
 #include <unistd.h>
+#include <exception>
 #include "POSIXPrivate.h"
 #include "WAVM/Inline/Assert.h"
 #include "WAVM/Inline/BasicTypes.h"
@@ -54,8 +55,22 @@ static bool isPageAligned(U8* address)
 	return (addressBits & (getBytesPerPage() - 1)) == 0;
 }
 
+std::unique_ptr<MemoryOverrideHook> memoryOverrideHook = nullptr;
+
+void Platform::installMemoryOverrideHook(std::unique_ptr<MemoryOverrideHook> hook)
+{
+	if(memoryOverrideHook)
+	{
+		fprintf(stderr, "Trying to double-register memory override hook\n");
+		dumpErrorCallStack(0);
+		std::terminate();
+	}
+	memoryOverrideHook = std::move(hook);
+}
+
 U8* Platform::allocateVirtualPages(Uptr numPages)
 {
+	if(memoryOverrideHook) { return memoryOverrideHook->allocateVirtualPages(numPages); }
 	Uptr numBytes = numPages << getBytesPerPageLog2();
 	void* result = mmap(nullptr, numBytes, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 	if(result == MAP_FAILED)
@@ -82,6 +97,11 @@ U8* Platform::allocateAlignedVirtualPages(Uptr numPages,
 										  Uptr alignmentLog2,
 										  U8*& outUnalignedBaseAddress)
 {
+	if(memoryOverrideHook)
+	{
+		return memoryOverrideHook->allocateAlignedVirtualPages(
+			numPages, alignmentLog2, outUnalignedBaseAddress);
+	}
 	const Uptr pageSizeLog2 = getBytesPerPageLog2();
 	const Uptr numBytes = numPages << pageSizeLog2;
 	if(alignmentLog2 > pageSizeLog2)
@@ -140,6 +160,10 @@ U8* Platform::allocateAlignedVirtualPages(Uptr numPages,
 bool Platform::commitVirtualPages(U8* baseVirtualAddress, Uptr numPages, MemoryAccess access)
 {
 	WAVM_ERROR_UNLESS(isPageAligned(baseVirtualAddress));
+	if(memoryOverrideHook)
+	{
+		return memoryOverrideHook->commitVirtualPages(baseVirtualAddress, numPages, access);
+	}
 	int result = mprotect(
 		baseVirtualAddress, numPages << getBytesPerPageLog2(), memoryAccessAsPOSIXFlag(access));
 	if(result != 0)
@@ -158,6 +182,10 @@ bool Platform::commitVirtualPages(U8* baseVirtualAddress, Uptr numPages, MemoryA
 bool Platform::setVirtualPageAccess(U8* baseVirtualAddress, Uptr numPages, MemoryAccess access)
 {
 	WAVM_ERROR_UNLESS(isPageAligned(baseVirtualAddress));
+	if(memoryOverrideHook)
+	{
+		return memoryOverrideHook->setVirtualPageAccess(baseVirtualAddress, numPages, access);
+	}
 	int result = mprotect(
 		baseVirtualAddress, numPages << getBytesPerPageLog2(), memoryAccessAsPOSIXFlag(access));
 	if(result != 0)
@@ -176,6 +204,10 @@ bool Platform::setVirtualPageAccess(U8* baseVirtualAddress, Uptr numPages, Memor
 void Platform::decommitVirtualPages(U8* baseVirtualAddress, Uptr numPages)
 {
 	WAVM_ERROR_UNLESS(isPageAligned(baseVirtualAddress));
+	if(memoryOverrideHook)
+	{
+		return memoryOverrideHook->decommitVirtualPages(baseVirtualAddress, numPages);
+	}
 	auto numBytes = numPages << getBytesPerPageLog2();
 	if(madvise(baseVirtualAddress, numBytes, MADV_DONTNEED) < 0)
 	{
@@ -199,6 +231,10 @@ void Platform::decommitVirtualPages(U8* baseVirtualAddress, Uptr numPages)
 void Platform::freeVirtualPages(U8* baseVirtualAddress, Uptr numPages)
 {
 	WAVM_ERROR_UNLESS(isPageAligned(baseVirtualAddress));
+	if(memoryOverrideHook)
+	{
+		return memoryOverrideHook->freeVirtualPages(baseVirtualAddress, numPages);
+	}
 	if(munmap(baseVirtualAddress, numPages << getBytesPerPageLog2()))
 	{
 		Errors::fatalf("munmap(0x%" WAVM_PRIxPTR ", %u) failed: %s",
@@ -214,6 +250,11 @@ void Platform::freeVirtualPages(U8* baseVirtualAddress, Uptr numPages)
 void Platform::freeAlignedVirtualPages(U8* unalignedBaseAddress, Uptr numPages, Uptr alignmentLog2)
 {
 	WAVM_ERROR_UNLESS(isPageAligned(unalignedBaseAddress));
+	if(memoryOverrideHook)
+	{
+		return memoryOverrideHook->freeAlignedVirtualPages(
+			unalignedBaseAddress, numPages, alignmentLog2);
+	}
 	if(munmap(unalignedBaseAddress, numPages << getBytesPerPageLog2()))
 	{
 		Errors::fatalf("munmap(0x%" WAVM_PRIxPTR ", %u) failed: %s",
