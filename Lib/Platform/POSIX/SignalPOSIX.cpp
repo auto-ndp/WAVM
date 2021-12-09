@@ -44,7 +44,7 @@ static void maskSignals(int how)
 	sigemptyset(&set);
 	sigaddset(&set, SIGFPE);
 	sigaddset(&set, SIGSEGV);
-	sigaddset(&set, SIGBUS);
+	// sigaddset(&set, SIGBUS);
 	pthread_sigmask(how, &set, nullptr);
 }
 
@@ -59,7 +59,9 @@ static void maskSignals(int how)
 	{
 	case SIGFPE:
 		if(signalInfo->si_code != FPE_INTDIV && signalInfo->si_code != FPE_INTOVF)
-		{ Errors::fatalfWithCallStack("unknown SIGFPE code"); }
+		{
+			Errors::fatalfWithCallStack("unknown SIGFPE code");
+		}
 		signal.type = Signal::Type::intDivideByZeroOrOverflow;
 		break;
 	case SIGSEGV:
@@ -117,7 +119,7 @@ bool Platform::initGlobalSignalsOnce()
 	signalAction.sa_flags = SA_SIGINFO | SA_ONSTACK | SA_NODEFER;
 	sigemptyset(&signalAction.sa_mask);
 	WAVM_ERROR_UNLESS(!sigaction(SIGSEGV, &signalAction, nullptr));
-	WAVM_ERROR_UNLESS(!sigaction(SIGBUS, &signalAction, nullptr));
+	// WAVM_ERROR_UNLESS(!sigaction(SIGBUS, &signalAction, nullptr));
 	WAVM_ERROR_UNLESS(!sigaction(SIGFPE, &signalAction, nullptr));
 
 	return true;
@@ -171,8 +173,7 @@ static void visitFDEs(const U8* ehFrames, Uptr numBytes, void (*visitFDE)(const 
 {
 	const U8* next = ehFrames;
 	const U8* end = ehFrames + numBytes;
-	do
-	{
+	do {
 		const U8* cfi = next;
 		Uptr numCFIBytes = *((const U32*)next);
 		next += 4;
