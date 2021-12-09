@@ -368,6 +368,45 @@ GrowResult Runtime::growMemory(Memory* memory, Uptr numPagesToGrow, Uptr* outOld
 	return GrowResult::success;
 }
 
+GrowResult Runtime::shrinkMemory(Memory* memory, Uptr numPagesToShrink, Uptr* outOldNumPages)
+{
+	Uptr oldNumPages;
+	if(numPagesToShrink == 0) { oldNumPages = memory->numPages.load(std::memory_order_seq_cst); }
+	else
+	{
+		Platform::RWMutex::ExclusiveLock resizingLock(memory->resizingMutex);
+		oldNumPages = memory->numPages.load(std::memory_order_acquire);
+
+		// Check for freeing more pages than currently allocated
+		if(numPagesToShrink > oldNumPages) { return GrowResult::outOfMaxSize; }
+
+		// Check the memory page quota.
+		if(memory->resourceQuota && !memory->resourceQuota->memoryPages.allocate(-numPagesToShrink))
+		{
+			return GrowResult::outOfQuota;
+		}
+
+		const Uptr newNumPages = oldNumPages - numPagesToShrink;
+
+		// Try to commit the new pages, and return GrowResult::outOfMemory if the commit fails.
+		Platform::decommitVirtualPages(
+			memory->baseAddress + newNumPages * IR::numBytesPerPage,
+			numPagesToShrink << getPlatformPagesPerWebAssemblyPageLog2());
+		Platform::deregisterVirtualAllocation(numPagesToShrink
+											  << getPlatformPagesPerWebAssemblyPageLog2());
+
+		memory->numPages.store(newNumPages, std::memory_order_release);
+		if(memory->id != UINTPTR_MAX)
+		{
+			memory->compartment->runtimeData->memories[memory->id].numPages.store(
+				newNumPages, std::memory_order_release);
+		}
+	}
+
+	if(outOldNumPages) { *outOldNumPages = oldNumPages; }
+	return GrowResult::success;
+}
+
 void Runtime::unmapMemoryPages(Memory* memory, Uptr pageIndex, Uptr numPages)
 {
 	WAVM_ASSERT(pageIndex + numPages > pageIndex);

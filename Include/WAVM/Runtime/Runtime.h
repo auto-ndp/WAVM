@@ -371,8 +371,13 @@ namespace WAVM { namespace Runtime {
 	// Returns the type of a memory.
 	WAVM_API IR::MemoryType getMemoryType(const Memory* memory);
 
-	// Grows or shrinks the size of a memory by numPages. Returns the previous size of the memory.
+	// Grows the size of a memory by numPages. Returns the previous size of the memory.
 	WAVM_API GrowResult growMemory(Memory* memory, Uptr numPages, Uptr* outOldNumPages = nullptr);
+
+	// Shrinks the size of a memory by numPagesToShrink. Returns the previous size of the memory.
+	WAVM_API GrowResult shrinkMemory(Memory* memory,
+									 Uptr numPagesToShrink,
+									 Uptr* outOldNumPages = nullptr);
 
 	// Unmaps a range of memory pages within the memory's address-space.
 	WAVM_API void unmapMemoryPages(Memory* memory, Uptr pageIndex, Uptr numPages);
@@ -431,8 +436,11 @@ namespace WAVM { namespace Runtime {
 	typedef const std::shared_ptr<Module>& ModuleRefParam;
 	typedef const std::shared_ptr<const Module>& ModuleConstRefParam;
 
-	// Compiles an IR module to object code, skipping the global cache and allowing for cross-compilation
-	WAVM_API std::vector<U8> precompileModule(const IR::Module& irModule, const std::string& targetArch, const std::string& targetCpu);
+	// Compiles an IR module to object code, skipping the global cache and allowing for
+	// cross-compilation
+	WAVM_API std::vector<U8> precompileModule(const IR::Module& irModule,
+											  const std::string& targetArch,
+											  const std::string& targetCpu);
 
 	// Compiles an IR module to object code.
 	WAVM_API ModuleRef compileModule(const IR::Module& irModule);
