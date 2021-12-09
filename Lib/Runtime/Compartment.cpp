@@ -79,8 +79,7 @@ Compartment* Runtime::createCompartment(std::string&& debugName)
 	return new Compartment(std::move(debugName), runtimeData, unalignedRuntimeData);
 }
 
-Compartment* Runtime::cloneCompartment(const Compartment* compartment,
-									   std::string&& debugName)
+Compartment* Runtime::cloneCompartment(const Compartment* compartment, std::string&& debugName)
 {
 	Compartment* newCompartment;
 
@@ -92,10 +91,10 @@ Compartment* Runtime::cloneCompartment(const Compartment* compartment,
 #ifdef WAVM_HAS_TRACY
 		ZoneNamedN(_zone_nc, "new Compartment", true);
 #endif
-		newCompartment = new Compartment(std::move(debugName), runtimeData, unalignedRuntimeData);;
+		newCompartment = new Compartment(std::move(debugName), runtimeData, unalignedRuntimeData);
+		;
 	}
-	Runtime::cloneCompartmentInto(
-		*newCompartment, compartment, std::move(debugName));
+	Runtime::cloneCompartmentInto(*newCompartment, compartment, std::move(debugName));
 	return newCompartment;
 }
 
@@ -104,6 +103,7 @@ namespace {
 	void clearIndexMap(Runtime::Compartment* ownerCompartment,
 					   WAVM::IndexMap<WAVM::Uptr, T>& indexMap)
 	{
+		Platform::RWMutex::ExclusiveLock lock(ownerCompartment->mutex);
 		for(T p : indexMap)
 		{
 			Runtime::GCObject* gp = p;
@@ -125,6 +125,7 @@ namespace {
 								const WAVM::HashSet<WAVM::Uptr>& ignoreList,
 								std::vector<WAVM::Uptr>& removeList)
 	{
+		Platform::RWMutex::ExclusiveLock lock(ownerCompartment->mutex);
 		removeList.clear();
 		for(auto it = indexMap.begin(); it != indexMap.end(); ++it)
 		{
@@ -209,6 +210,7 @@ WAVM_API void Runtime::cloneCompartmentInto(Compartment& targetCompartment,
 		&targetCompartment, targetCompartment.memories, ignoreIndexList, removeList);
 
 	// Clone globals.
+	clearIndexMap(&targetCompartment, targetCompartment.globals);
 	{
 #ifdef WAVM_HAS_TRACY
 		ZoneNamedN(_zone_mcg, "memcpy Globals", true);
@@ -218,7 +220,6 @@ WAVM_API void Runtime::cloneCompartmentInto(Compartment& targetCompartment,
 			   oldCompartment->initialContextMutableGlobals,
 			   sizeof(targetCompartment.initialContextMutableGlobals));
 	}
-	clearIndexMap(&targetCompartment, targetCompartment.globals);
 	for(Global* global : oldCompartment->globals)
 	{
 #ifdef WAVM_HAS_TRACY
