@@ -374,10 +374,10 @@ namespace WAVM { namespace Runtime {
 	// Grows the size of a memory by numPages. Returns the previous size of the memory.
 	WAVM_API GrowResult growMemory(Memory* memory, Uptr numPages, Uptr* outOldNumPages = nullptr);
 
-	// Shrinks the size of a memory by numPagesToShrink. Returns the previous size of the memory.
+	// Shrinks the size of a memory by numPagesToShrink. Returns the new size of the memory.
 	WAVM_API GrowResult shrinkMemory(Memory* memory,
 									 Uptr numPagesToShrink,
-									 Uptr* outOldNumPages = nullptr);
+									 Uptr* outNewNumPages = nullptr);
 
 	// Unmaps a range of memory pages within the memory's address-space.
 	WAVM_API void unmapMemoryPages(Memory* memory, Uptr pageIndex, Uptr numPages);

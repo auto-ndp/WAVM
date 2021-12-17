@@ -368,7 +368,7 @@ GrowResult Runtime::growMemory(Memory* memory, Uptr numPagesToGrow, Uptr* outOld
 	return GrowResult::success;
 }
 
-GrowResult Runtime::shrinkMemory(Memory* memory, Uptr numPagesToShrink, Uptr* outOldNumPages)
+GrowResult Runtime::shrinkMemory(Memory* memory, Uptr numPagesToShrink, Uptr* outNewNumPages)
 {
 	Uptr oldNumPages;
 	if(numPagesToShrink == 0) { oldNumPages = memory->numPages.load(std::memory_order_seq_cst); }
@@ -403,7 +403,7 @@ GrowResult Runtime::shrinkMemory(Memory* memory, Uptr numPagesToShrink, Uptr* ou
 		}
 	}
 
-	if(outOldNumPages) { *outOldNumPages = oldNumPages; }
+	if(outNewNumPages) { *outNewNumPages = oldNumPages; }
 	return GrowResult::success;
 }
 
