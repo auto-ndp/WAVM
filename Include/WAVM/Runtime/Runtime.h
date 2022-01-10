@@ -172,6 +172,7 @@ namespace WAVM { namespace Runtime {
 		  WAVM::IR::ValueType::i64);                                                               \
 	visit(stackOverflow);                                                                          \
 	visit(integerDivideByZeroOrOverflow);                                                          \
+	visit(timeout);                                                                                \
 	visit(invalidFloatOperation);                                                                  \
 	visit(invokeSignatureMismatch);                                                                \
 	visit(reachedUnreachable);                                                                     \

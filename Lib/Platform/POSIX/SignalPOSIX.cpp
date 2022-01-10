@@ -44,6 +44,7 @@ static void maskSignals(int how)
 	sigemptyset(&set);
 	sigaddset(&set, SIGFPE);
 	sigaddset(&set, SIGSEGV);
+	sigaddset(&set, SIGALRM);
 	// sigaddset(&set, SIGBUS);
 	pthread_sigmask(how, &set, nullptr);
 }
@@ -77,6 +78,10 @@ static void maskSignals(int how)
 		signal.accessViolation.address = reinterpret_cast<Uptr>(signalInfo->si_addr);
 		break;
 	}
+	case SIGALRM: {
+		signal.type = Signal::Type::timeout;
+		break;
+	}
 	default: Errors::fatalfWithCallStack("unknown signal number: %i", signalNumber); break;
 	};
 
@@ -107,6 +112,7 @@ static void maskSignals(int how)
 	case SIGFPE: Errors::fatalfWithCallStack("unhandled SIGFPE");
 	case SIGSEGV: Errors::fatalfWithCallStack("unhandled SIGSEGV");
 	case SIGBUS: Errors::fatalfWithCallStack("unhandled SIGBUS");
+	case SIGALRM: Errors::fatalfWithCallStack("unhandled SIGALRM");
 	default: WAVM_UNREACHABLE();
 	};
 }
@@ -121,6 +127,7 @@ bool Platform::initGlobalSignalsOnce()
 	WAVM_ERROR_UNLESS(!sigaction(SIGSEGV, &signalAction, nullptr));
 	// WAVM_ERROR_UNLESS(!sigaction(SIGBUS, &signalAction, nullptr));
 	WAVM_ERROR_UNLESS(!sigaction(SIGFPE, &signalAction, nullptr));
+	WAVM_ERROR_UNLESS(!sigaction(SIGALRM, &signalAction, nullptr));
 
 	return true;
 }
