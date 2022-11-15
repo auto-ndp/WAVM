@@ -73,7 +73,7 @@ namespace WAVM { namespace LLVMJIT {
 											   llvm::Type* valueType,
 											   U32 alignment = 1)
 		{
-			auto load = irBuilder.CreateLoad(
+			auto load = emitLoad(irBuilder, valueType,
 				irBuilder.CreatePointerCast(pointer, valueType->getPointerTo()));
 			load->setAlignment(LLVM_ALIGNMENT(alignment));
 			return load;
@@ -92,7 +92,7 @@ namespace WAVM { namespace LLVMJIT {
 			// 31 bits.
 			return irBuilder.CreateIntToPtr(
 				irBuilder.CreateAnd(
-					irBuilder.CreatePtrToInt(irBuilder.CreateLoad(contextPointerVariable),
+					irBuilder.CreatePtrToInt(emitLoad(irBuilder, llvmContext.i8PtrType, contextPointerVariable),
 											 llvmContext.i64Type),
 					emitLiteral(llvmContext, ~((U64(1) << 31) - 1))),
 				llvmContext.i8PtrType);
@@ -215,7 +215,7 @@ namespace WAVM { namespace LLVMJIT {
 				auto callArgsAlloca
 					= (llvm::Value**)alloca(sizeof(llvm::Value*) * (args.size() + 1));
 				callArgs = llvm::ArrayRef<llvm::Value*>(callArgsAlloca, args.size() + 1);
-				callArgsAlloca[0] = irBuilder.CreateLoad(contextPointerVariable);
+				callArgsAlloca[0] = emitLoad(irBuilder, llvmContext.i8PtrType, contextPointerVariable);
 				for(Uptr argIndex = 0; argIndex < args.size(); ++argIndex)
 				{ callArgsAlloca[1 + argIndex] = args[argIndex]; }
 			}
@@ -367,7 +367,7 @@ namespace WAVM { namespace LLVMJIT {
 		{
 			llvm::Value* returnStruct = getZeroedLLVMReturnStruct(llvmContext, resultTypes);
 			returnStruct = irBuilder.CreateInsertValue(
-				returnStruct, irBuilder.CreateLoad(contextPointerVariable), {U32(0)});
+				returnStruct, emitLoad(irBuilder, llvmContext.i8PtrType, contextPointerVariable), {U32(0)});
 
 			WAVM_ASSERT(resultTypes.size() == results.size());
 			if(areResultsReturnedDirectly(resultTypes))
@@ -395,7 +395,7 @@ namespace WAVM { namespace LLVMJIT {
 					irBuilder.CreateStore(results[resultIndex],
 										  irBuilder.CreatePointerCast(
 											  irBuilder.CreateInBoundsGEP(
-												  irBuilder.CreateLoad(contextPointerVariable),
+												  emitLoad(irBuilder, llvmContext.i8PtrType, contextPointerVariable),
 												  {emitLiteral(llvmContext, resultOffset)}),
 											  asLLVMType(llvmContext, resultType)->getPointerTo()));
 

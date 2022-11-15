@@ -394,7 +394,7 @@ void EmitFunctionContext::call_indirect(CallIndirectImm imm)
 
 	// Load the funcref referenced by the table.
 	auto elementPointer = irBuilder.CreateInBoundsGEP(tableBasePointer, {clampedElementIndex});
-	llvm::LoadInst* biasedValueLoad = irBuilder.CreateLoad(elementPointer);
+	llvm::LoadInst* biasedValueLoad = emitLoad(irBuilder, llvmContext.i8PtrType, elementPointer);
 	biasedValueLoad->setAtomic(llvm::AtomicOrdering::Acquire);
 	biasedValueLoad->setAlignment(LLVM_ALIGNMENT(sizeof(Uptr)));
 	auto runtimeFunction = irBuilder.CreateIntToPtr(

@@ -159,7 +159,7 @@ static llvm::Value* getOffsetAndBoundedAddress(EmitFunctionContext& functionCont
 		// the guard region.
 
 		llvm::Value* endAddress
-			= irBuilder.CreateLoad(functionContext.memoryInfos[memoryIndex].endAddressVariable);
+			= emitLoad(irBuilder, functionContext.moduleContext.iptrType, functionContext.memoryInfos[memoryIndex].endAddressVariable);
 		address = irBuilder.CreateSelect(
 			irBuilder.CreateICmpULT(address, endAddress), address, endAddress);
 	}
@@ -184,7 +184,7 @@ llvm::Value* EmitFunctionContext::coerceAddressToPointer(llvm::Value* boundedAdd
 														 Uptr memoryIndex)
 {
 	llvm::Value* memoryBasePointer
-		= irBuilder.CreateLoad(memoryInfos[memoryIndex].basePointerVariable);
+		= emitLoad(irBuilder, llvmContext.i8PtrType, memoryInfos[memoryIndex].basePointerVariable);
 	llvm::Value* bytePointer = irBuilder.CreateInBoundsGEP(memoryBasePointer, boundedAddress);
 
 	// Cast the pointer to the appropriate type.
@@ -317,7 +317,7 @@ void EmitFunctionContext::memory_fill(MemoryImm imm)
 			imm.offset,                                                                            \
 			BoundsCheckOp::clampToGuardRegion);                                                    \
 		auto pointer = coerceAddressToPointer(boundedAddress, llvmMemoryType, imm.memoryIndex);    \
-		auto load = irBuilder.CreateLoad(pointer);                                                 \
+		auto load = emitLoad(irBuilder, llvmMemoryType, pointer);                                  \
 		/* Don't trust the alignment hint provided by the WebAssembly code, since the load can't   \
 		 * trap if it's wrong. */                                                                  \
 		load->setAlignment(LLVM_ALIGNMENT(1));                                                     \
@@ -416,7 +416,7 @@ static void emitLoadLane(EmitFunctionContext& functionContext,
 		BoundsCheckOp::clampToGuardRegion);
 	llvm::Value* pointer = functionContext.coerceAddressToPointer(
 		boundedAddress, llvmVectorType->getScalarType(), loadOrStoreImm.memoryIndex);
-	llvm::LoadInst* load = functionContext.irBuilder.CreateLoad(pointer);
+	llvm::LoadInst* load = emitLoad(functionContext.irBuilder, llvmVectorType->getScalarType(), pointer);
 	// Don't trust the alignment hint provided by the WebAssembly code, since the load can't trap if
 	// it's wrong.
 	load->setAlignment(LLVM_ALIGNMENT(1));
@@ -512,7 +512,7 @@ static void emitLoadInterleaved(EmitFunctionContext& functionContext,
 		for(U32 vectorIndex = 0; vectorIndex < numVectors; ++vectorIndex)
 		{
 			auto load
-				= functionContext.irBuilder.CreateLoad(functionContext.irBuilder.CreateInBoundsGEP(
+				= emitLoad(functionContext.irBuilder, llvmValueType, functionContext.irBuilder.CreateInBoundsGEP(
 					pointer, {emitLiteral(functionContext.llvmContext, U32(vectorIndex))}));
 			/* Don't trust the alignment hint provided by the WebAssembly code, since the load
 			 * can't trap if it's wrong. */
@@ -767,7 +767,7 @@ void EmitFunctionContext::atomic_fence(AtomicFenceImm imm)
 			BoundsCheckOp::clampToGuardRegion);                                                    \
 		trapIfMisalignedAtomic(boundedAddress, numBytesLog2);                                      \
 		auto pointer = coerceAddressToPointer(boundedAddress, llvmMemoryType, imm.memoryIndex);    \
-		auto load = irBuilder.CreateLoad(pointer);                                                 \
+		auto load = emitLoad(irBuilder, llvmMemoryType, pointer);                                  \
 		load->setAlignment(LLVM_ALIGNMENT(U64(1) << imm.alignmentLog2));                           \
 		load->setVolatile(true);                                                                   \
 		load->setAtomic(llvm::AtomicOrdering::SequentiallyConsistent);                             \

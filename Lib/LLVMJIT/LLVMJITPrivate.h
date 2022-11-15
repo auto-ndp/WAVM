@@ -152,6 +152,17 @@ namespace WAVM { namespace LLVMJIT {
 		return llvm::ConstantInt::get(iptrType, iptrValue);
 	}
 
+	// Pointer operations for compatibility with LLVM before and after opaque pointer types introduced in LLVM 13
+	inline llvm::LoadInst* emitLoad(llvm::IRBuilder<>& irBuilder, llvm::Type* pointeeType, llvm::Value* pointer)
+	{
+#if LLVM_VERSION_MAJOR < 13
+		WAVM_SUPPRESS_UNUSED(pointeeType);
+		return irBuilder.CreateLoad(pointer);
+#else
+		return irBuilder.CreateLoad(pointeeType, pointer);
+#endif
+	}
+
 	// Converts a WebAssembly type to a LLVM type.
 	inline llvm::Type* asLLVMType(LLVMContext& llvmContext, IR::ValueType type)
 	{
