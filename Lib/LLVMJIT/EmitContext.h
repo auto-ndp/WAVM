@@ -121,7 +121,7 @@ namespace WAVM { namespace LLVMJIT {
 					emitLiteralIptr(offsetof(Runtime::MemoryRuntimeData, endAddress),
 									memoryOffset->getType()));
 				irBuilder.CreateStore(
-					loadFromUntypedPointer(emitInBoundsGEP(irBuilder, memoryOffset->getType(),
+					loadFromUntypedPointer(emitInBoundsGEP(irBuilder, llvmContext.i8Type,
 											   compartmentAddress, {memoryNumReservedBytesOffset}),
 										   memoryOffset->getType()),
 					memoryInfo.endAddressVariable);

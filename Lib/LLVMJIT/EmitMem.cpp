@@ -512,7 +512,7 @@ static void emitLoadInterleaved(EmitFunctionContext& functionContext,
 		for(U32 vectorIndex = 0; vectorIndex < numVectors; ++vectorIndex)
 		{
 			auto load
-				= emitLoad(functionContext.irBuilder, llvmValueType, emitInBoundsGEP(functionContext.irBuilder, llvmValueType->getScalarType(),
+				= emitLoad(functionContext.irBuilder, llvmValueType, emitInBoundsGEP(functionContext.irBuilder, llvmValueType,
 					pointer, {emitLiteral(functionContext.llvmContext, U32(vectorIndex))}));
 			/* Don't trust the alignment hint provided by the WebAssembly code, since the load
 			 * can't trap if it's wrong. */
@@ -595,7 +595,7 @@ static void emitStoreInterleaved(EmitFunctionContext& functionContext,
 			}
 			auto store = functionContext.irBuilder.CreateStore(
 				interleavedVector,
-				emitInBoundsGEP(functionContext.irBuilder, llvmValueType->getScalarType(),
+				emitInBoundsGEP(functionContext.irBuilder, llvmValueType,
 					pointer, {emitLiteral(functionContext.llvmContext, U32(vectorIndex))}));
 			store->setVolatile(true);
 			store->setAlignment(LLVM_ALIGNMENT(1));
