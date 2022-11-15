@@ -173,6 +173,26 @@ namespace WAVM { namespace LLVMJIT {
 #endif
 	}
 
+	inline llvm::AtomicCmpXchgInst* emitAtomicCmpXchg(llvm::IRBuilder<>& irBuilder, llvm::Value *pointer, llvm::Value *cmpValue, llvm::Value *newValue,
+                      llvm::AtomicOrdering successOrdering,
+                      llvm::AtomicOrdering failureOrdering) {
+#if LLVM_VERSION_MAJOR < 13
+		return irBuilder.CreateAtomicCmpXchg(pointer, cmpValue, newValue, successOrdering, failureOrdering);
+#else
+		return irBuilder.CreateAtomicCmpXchg(pointer, cmpValue, newValue, llvm::MaybeAlign(0), successOrdering, failureOrdering);
+#endif
+	}
+
+	inline llvm::AtomicRMWInst *emitAtomicRMW(llvm::IRBuilder<>& irBuilder, llvm::AtomicRMWInst::BinOp op, llvm::Value *pointer,
+                                 llvm::Value *value,
+                                 llvm::AtomicOrdering ordering) {
+#if LLVM_VERSION_MAJOR < 13
+		return irBuilder.CreateAtomicRMW(op, pointer, value, ordering);
+#else
+		return irBuilder.CreateAtomicRMW(op, pointer, value, llvm::MaybeAlign(0), ordering);
+#endif
+	}
+
 	// Converts a WebAssembly type to a LLVM type.
 	inline llvm::Type* asLLVMType(LLVMContext& llvmContext, IR::ValueType type)
 	{

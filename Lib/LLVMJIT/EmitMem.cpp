@@ -828,7 +828,7 @@ EMIT_ATOMIC_STORE_OP(i64, atomic_store32, llvmContext.i32Type, 2, trunc)
 		trapIfMisalignedAtomic(boundedAddress, numBytesLog2);                                      \
 		auto pointer = coerceAddressToPointer(boundedAddress, llvmMemoryType, imm.memoryIndex);    \
 		auto atomicCmpXchg                                                                         \
-			= irBuilder.CreateAtomicCmpXchg(pointer,                                               \
+			= emitAtomicCmpXchg(irBuilder,  pointer,                                               \
 											expectedValue,                                         \
 											replacementValue,                                      \
 											llvm::AtomicOrdering::SequentiallyConsistent,          \
@@ -862,7 +862,7 @@ EMIT_ATOMIC_CMPXCHG(i64, atomic_rmw_cmpxchg, llvmContext.i64Type, 3, identity, i
 			BoundsCheckOp::clampToGuardRegion);                                                    \
 		trapIfMisalignedAtomic(boundedAddress, numBytesLog2);                                      \
 		auto pointer = coerceAddressToPointer(boundedAddress, llvmMemoryType, imm.memoryIndex);    \
-		auto atomicRMW = irBuilder.CreateAtomicRMW(llvm::AtomicRMWInst::BinOp::rmwOpId,            \
+		auto atomicRMW = emitAtomicRMW(irBuilder,  llvm::AtomicRMWInst::BinOp::rmwOpId,            \
 												   pointer,                                        \
 												   value,                                          \
 												   llvm::AtomicOrdering::SequentiallyConsistent);  \
