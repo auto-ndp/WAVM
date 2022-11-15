@@ -71,7 +71,7 @@ void EmitFunctionContext::global_get(GetOrSetVariableImm<true> imm)
 		// ContextRuntimeData::globalData that its value is stored at.
 		llvm::Value* globalDataOffset = irBuilder.CreatePtrToInt(
 			moduleContext.globals[imm.variableIndex], moduleContext.iptrType);
-		llvm::Value* globalPointer = irBuilder.CreateInBoundsGEP(
+		llvm::Value* globalPointer = emitInBoundsGEP(irBuilder, llvmContext.i8Type,
 			emitLoad(irBuilder, llvmContext.i8PtrType, contextPointerVariable), {globalDataOffset});
 		value = loadFromUntypedPointer(globalPointer,
 									   asLLVMType(llvmContext, globalType.valueType),
@@ -147,7 +147,7 @@ void EmitFunctionContext::global_set(GetOrSetVariableImm<true> imm)
 	// ContextRuntimeData::globalData that its value is stored at.
 	llvm::Value* globalDataOffset = irBuilder.CreatePtrToInt(
 		moduleContext.globals[imm.variableIndex], moduleContext.iptrType);
-	llvm::Value* globalPointer = irBuilder.CreateInBoundsGEP(
+	llvm::Value* globalPointer = emitInBoundsGEP(irBuilder, llvmContext.i8Type,
 		emitLoad(irBuilder, llvmContext.i8PtrType, contextPointerVariable), {globalDataOffset});
 	storeToUntypedPointer(value, globalPointer);
 }

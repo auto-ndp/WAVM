@@ -41,7 +41,7 @@ static llvm::Value* getMemoryNumPages(EmitFunctionContext& functionContext, Uptr
 
 	// Load the number of memory pages from the compartment runtime data.
 	llvm::LoadInst* memoryNumPagesLoad = functionContext.loadFromUntypedPointer(
-		functionContext.irBuilder.CreateInBoundsGEP(
+		emitInBoundsGEP(functionContext.irBuilder, functionContext.llvmContext.i8Type,
 			functionContext.getCompartmentAddress(),
 			{llvm::ConstantExpr::getAdd(
 				memoryOffset,
@@ -185,7 +185,7 @@ llvm::Value* EmitFunctionContext::coerceAddressToPointer(llvm::Value* boundedAdd
 {
 	llvm::Value* memoryBasePointer
 		= emitLoad(irBuilder, llvmContext.i8PtrType, memoryInfos[memoryIndex].basePointerVariable);
-	llvm::Value* bytePointer = irBuilder.CreateInBoundsGEP(memoryBasePointer, boundedAddress);
+	llvm::Value* bytePointer = emitInBoundsGEP(irBuilder, llvmContext.i8Type, memoryBasePointer, boundedAddress);
 
 	// Cast the pointer to the appropriate type.
 	return irBuilder.CreatePointerCast(bytePointer, memoryType->getPointerTo());
@@ -512,7 +512,7 @@ static void emitLoadInterleaved(EmitFunctionContext& functionContext,
 		for(U32 vectorIndex = 0; vectorIndex < numVectors; ++vectorIndex)
 		{
 			auto load
-				= emitLoad(functionContext.irBuilder, llvmValueType, functionContext.irBuilder.CreateInBoundsGEP(
+				= emitLoad(functionContext.irBuilder, llvmValueType, emitInBoundsGEP(functionContext.irBuilder, llvmValueType->getScalarType(),
 					pointer, {emitLiteral(functionContext.llvmContext, U32(vectorIndex))}));
 			/* Don't trust the alignment hint provided by the WebAssembly code, since the load
 			 * can't trap if it's wrong. */
@@ -595,7 +595,7 @@ static void emitStoreInterleaved(EmitFunctionContext& functionContext,
 			}
 			auto store = functionContext.irBuilder.CreateStore(
 				interleavedVector,
-				functionContext.irBuilder.CreateInBoundsGEP(
+				emitInBoundsGEP(functionContext.irBuilder, llvmValueType->getScalarType(),
 					pointer, {emitLiteral(functionContext.llvmContext, U32(vectorIndex))}));
 			store->setVolatile(true);
 			store->setAlignment(LLVM_ALIGNMENT(1));

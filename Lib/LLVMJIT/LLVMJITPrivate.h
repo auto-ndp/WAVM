@@ -163,6 +163,16 @@ namespace WAVM { namespace LLVMJIT {
 #endif
 	}
 
+    inline llvm::Value* emitInBoundsGEP(llvm::IRBuilder<>& irBuilder, llvm::Type *scalarElementType, llvm::Value *pointer, llvm::ArrayRef<llvm::Value *> indexList,
+                               const llvm::Twine &name = "") {
+#if LLVM_VERSION_MAJOR < 13
+		WAVM_SUPPRESS_UNUSED(scalarElementType);
+		return irBuilder.CreateInBoundsGEP(pointer, indexList, name);
+#else
+		return irBuilder.CreateInBoundsGEP(scalarElementType, pointer, indexList, name);
+#endif
+	}
+
 	// Converts a WebAssembly type to a LLVM type.
 	inline llvm::Type* asLLVMType(LLVMContext& llvmContext, IR::ValueType type)
 	{
