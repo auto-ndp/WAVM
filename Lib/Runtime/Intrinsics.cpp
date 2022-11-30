@@ -18,7 +18,7 @@
 #include "WAVM/Runtime/Runtime.h"
 
 #ifdef WAVM_HAS_TRACY
-#include <Tracy.hpp>
+#include <tracy/Tracy.hpp>
 #endif
 
 namespace WAVM { namespace Intrinsics {

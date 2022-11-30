@@ -13,7 +13,7 @@
 #include "WAVM/Platform/Mutex.h"
 
 #ifdef WAVM_HAS_TRACY
-#include <Tracy.hpp>
+#include <tracy/Tracy.hpp>
 #endif
 
 #ifdef __APPLE__

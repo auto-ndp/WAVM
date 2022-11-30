@@ -17,7 +17,7 @@
 #include "WAVM/WASM/WASM.h"
 
 #ifdef WAVM_HAS_TRACY
-#include <Tracy.hpp>
+#include <tracy/Tracy.hpp>
 #endif
 
 using namespace WAVM;

@@ -15,7 +15,7 @@
 #include "WAVM/Platform/Defines.h"
 
 #ifdef WAVM_HAS_TRACY
-#include <Tracy.hpp>
+#include <tracy/Tracy.hpp>
 #endif
 
 PUSH_DISABLE_WARNINGS_FOR_LLVM_HEADERS
