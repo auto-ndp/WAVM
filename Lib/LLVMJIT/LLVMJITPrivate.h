@@ -152,47 +152,6 @@ namespace WAVM { namespace LLVMJIT {
 		return llvm::ConstantInt::get(iptrType, iptrValue);
 	}
 
-	// Pointer operations for compatibility with LLVM before and after opaque pointer types introduced in LLVM 13
-	inline llvm::LoadInst* emitLoad(llvm::IRBuilder<>& irBuilder, llvm::Type* pointeeType, llvm::Value* pointer)
-	{
-#if LLVM_VERSION_MAJOR < 13
-		WAVM_SUPPRESS_UNUSED(pointeeType);
-		return irBuilder.CreateLoad(pointer);
-#else
-		return irBuilder.CreateLoad(pointeeType, pointer);
-#endif
-	}
-
-    inline llvm::Value* emitInBoundsGEP(llvm::IRBuilder<>& irBuilder, llvm::Type *scalarElementType, llvm::Value *pointer, llvm::ArrayRef<llvm::Value *> indexList,
-                               const llvm::Twine &name = "") {
-#if LLVM_VERSION_MAJOR < 13
-		WAVM_SUPPRESS_UNUSED(scalarElementType);
-		return irBuilder.CreateInBoundsGEP(pointer, indexList, name);
-#else
-		return irBuilder.CreateInBoundsGEP(scalarElementType, pointer, indexList, name);
-#endif
-	}
-
-	inline llvm::AtomicCmpXchgInst* emitAtomicCmpXchg(llvm::IRBuilder<>& irBuilder, llvm::Value *pointer, llvm::Value *cmpValue, llvm::Value *newValue,
-                      llvm::AtomicOrdering successOrdering,
-                      llvm::AtomicOrdering failureOrdering) {
-#if LLVM_VERSION_MAJOR < 13
-		return irBuilder.CreateAtomicCmpXchg(pointer, cmpValue, newValue, successOrdering, failureOrdering);
-#else
-		return irBuilder.CreateAtomicCmpXchg(pointer, cmpValue, newValue, llvm::MaybeAlign(0), successOrdering, failureOrdering);
-#endif
-	}
-
-	inline llvm::AtomicRMWInst *emitAtomicRMW(llvm::IRBuilder<>& irBuilder, llvm::AtomicRMWInst::BinOp op, llvm::Value *pointer,
-                                 llvm::Value *value,
-                                 llvm::AtomicOrdering ordering) {
-#if LLVM_VERSION_MAJOR < 13
-		return irBuilder.CreateAtomicRMW(op, pointer, value, ordering);
-#else
-		return irBuilder.CreateAtomicRMW(op, pointer, value, llvm::MaybeAlign(0), ordering);
-#endif
-	}
-
 	// Converts a WebAssembly type to a LLVM type.
 	inline llvm::Type* asLLVMType(LLVMContext& llvmContext, IR::ValueType type)
 	{
@@ -365,21 +324,19 @@ namespace WAVM { namespace LLVMJIT {
 		{
 			auto attrs = function->getAttributes();
 
-#if LLVM_VERSION_MAJOR < 14
-			auto addAttribute = [&](llvm::StringRef kind, llvm::StringRef value){attrs = attrs.addAttribute(function->getContext(),
-									   llvm::AttributeList::FunctionIndex, kind, value);};
-#else
-			auto addAttribute = [&](llvm::StringRef kind, llvm::StringRef value){attrs = attrs.addFnAttribute(function->getContext(),
-									   kind, value);};
-#endif
-
 			// LLVM 9+ has a more general purpose frame-pointer=(all|non-leaf|none) attribute that
 			// WAVM should use once we can depend on it.
-			addAttribute("no-frame-pointer-elim", "true");
+			attrs = attrs.addAttribute(function->getContext(),
+									   llvm::AttributeList::FunctionIndex,
+									   "no-frame-pointer-elim",
+									   "true");
 
 			// Set the probe-stack attribute: this will cause functions that allocate more than a
 			// page of stack space to call the wavm_probe_stack function defined in POSIX.S
-			addAttribute("probe-stack", "wavm_probe_stack");
+			attrs = attrs.addAttribute(function->getContext(),
+									   llvm::AttributeList::FunctionIndex,
+									   "probe-stack",
+									   "wavm_probe_stack");
 
 			function->setAttributes(attrs);
 		}
