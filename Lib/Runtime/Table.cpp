@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <stdexcept>
+#include <algorithm>
 #include <vector>
 #include "RuntimePrivate.h"
 #include "WAVM/IR/Types.h"
